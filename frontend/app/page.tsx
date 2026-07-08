@@ -164,7 +164,7 @@ export default function Home() {
           <div className="text-center space-y-4 mb-8 animate-fade-in">
             <div className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4 text-primary" />
-              Powered by Google Gemini AI
+              Powered by OpenRouter AI
             </div>
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
               Import CSV Data into Your CRM
@@ -212,7 +212,7 @@ export default function Home() {
                   <div>
                     <p className="font-medium">AI is processing your data...</p>
                     <p className="text-sm text-muted-foreground">
-                      Mapping columns to CRM schema with Gemini AI
+                      Mapping columns to CRM schema with OpenRouter AI
                     </p>
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t mt-16">
         <div className="container py-6 text-center text-sm text-muted-foreground">
-          EasyGrow &middot; AI-Powered CSV Importer &middot; Built with Next.js, Express, and Gemini AI
+          EasyGrow &middot; AI-Powered CSV Importer &middot; Built with Next.js, Express, and OpenRouter AI
         </div>
       </footer>
     </div>

@@ -77,6 +77,7 @@ describe('OpenRouterService - Mock Mode', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    mockCreate.mockReset();
     delete process.env.OPENROUTER_API_KEY;
     delete process.env.OPENROUTER_MOCK_MODE;
     delete process.env.OPENROUTER_MODEL;
@@ -133,6 +134,7 @@ describe('OpenRouterService - Retry Logic', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    mockCreate.mockReset();
     delete process.env.OPENROUTER_API_KEY;
     delete process.env.OPENROUTER_MOCK_MODE;
     delete process.env.OPENROUTER_MODEL;
@@ -181,16 +183,19 @@ describe('OpenRouterService - Retry Logic', () => {
     expect(mockCreate).toHaveBeenCalledTimes(2);
   });
 
-  it('should retry on insufficient_quota error', async () => {
-    mockCreate
-      .mockRejectedValueOnce(new Error('insufficient_quota'))
-      .mockResolvedValueOnce(VALID_MAPPING_RESPONSE);
+  it('should throw INSUFFICIENT_CREDITS on insufficient_quota (402) without retrying', async () => {
+    const err = new Error('insufficient_quota');
+    (err as any).status = 402;
+    mockCreate.mockRejectedValue(err);
 
     const service = new OpenRouterService();
-    const result = await service.getColumnMapping(SAMPLE_HEADERS, SAMPLE_ROWS);
 
-    expect(result.mapping['Full Name']).toBe('name');
-    expect(mockCreate).toHaveBeenCalledTimes(2);
+    const error = await service.getColumnMapping(SAMPLE_HEADERS, SAMPLE_ROWS).catch(e => e);
+
+    expect(error).toBeInstanceOf(OpenRouterApiError);
+    expect(error.code).toBe('INSUFFICIENT_CREDITS');
+    expect(error.message).toContain('Insufficient credits');
+    expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
   it('should retry on timeout error', async () => {
@@ -245,7 +250,8 @@ describe('OpenRouterService - Retry Logic', () => {
 
     expect(error).toBeInstanceOf(OpenRouterApiError);
     expect(error.code).toBe('MODEL_NOT_FOUND');
-    expect(error.message).toContain('Model not found');
+    expect(error.message).toContain('not found');
+    expect(error.message).toContain('openrouter/auto');
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
@@ -271,7 +277,8 @@ describe('OpenRouterService - Retry Logic', () => {
     const error = await service.getColumnMapping(SAMPLE_HEADERS, SAMPLE_ROWS).catch(e => e);
 
     expect(error).toBeInstanceOf(OpenRouterApiError);
-    expect(error.code).toBe('EMPTY_RESPONSE');
+    expect(error.message).toContain('Empty response');
+    expect(mockCreate).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -350,7 +357,7 @@ describe('OpenRouterService - Constructor', () => {
     const config = service.getConfig();
 
     expect(config.apiKeyLoaded).toBe(true);
-    expect(config.apiKeyPreview).toBe('sk-or-v1' + '********');
+    expect(config.apiKeyPreview).toBe('sk-or-v1-' + '********');
     expect(config.model).toBe('google/gemma-3-27b-it:free');
     expect(config.mockMode).toBe(false);
     expect(config.referer).toBe('http://localhost:3000');

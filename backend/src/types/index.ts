@@ -71,7 +71,7 @@ export interface UploadResponse {
   headers: string[];
 }
 
-// ===== Gemini / Ai Mapping Types =====
+// ===== AI Mapping Types =====
 
 export interface AiMappingRequest {
   fileId: string;
@@ -117,6 +117,8 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
+  code?: string;
+  requestId?: string;
 }
 
 // ===== Dataset Classification Types =====

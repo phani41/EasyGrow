@@ -32,8 +32,6 @@ export const sleep = (ms: number): Promise<void> =>
  * Wraps a promise with a timeout.
  * If the promise doesn't settle within the given time, the returned promise rejects
  * with a TimeoutError. The original promise continues executing but its result is discarded.
- *
- * This is useful for APIs (like the Gemini SDK) that don't support AbortSignal.
  */
 export class TimeoutError extends Error {
   constructor(message: string) {

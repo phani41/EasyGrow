@@ -100,7 +100,7 @@ EasyGrow intelligently imports CSV data into your CRM using OpenRouter AI for sm
 │  │  └──────────┘                    │  │  CSV     │ │    │  │
 │  │                                  │  │  Parser  │ │    │  │
 │  │                                  │  ├──────────┤ │    │  │
-│  │                                  │  │  Gemini  │ │    │  │
+│  │                                  │  │  OpenRouter  │ │    │  │
 │  │                                  │  │  AI      │ │    │  │
 │  │                                  │  ├──────────┤ │    │  │
 │  │                                  │  │  Valid.  │ │    │  │
@@ -154,7 +154,7 @@ EasyGrow intelligently imports CSV data into your CRM using OpenRouter AI for sm
 ### Prerequisites
 - **Node.js** 18 or later
 - **npm** or **pnpm**
-- **Google Gemini API key** — Get one free at [Google AI Studio](https://aistudio.google.com/apikey)
+- **OpenRouter API key** — Get one free at [OpenRouter](https://openrouter.ai/keys)
 
 ### 1. Clone and Install
 
@@ -370,7 +370,6 @@ easygrow/
 │   │   ├── services/          # Business logic
 │   │   │   ├── cache.service.ts
 │   │   │   ├── csv.service.ts
-│   │   │   ├── gemini.service.ts
 │   │   │   ├── logger.service.ts
 │   │   │   ├── mapping.service.ts
 │   │   │   ├── metrics.service.ts
@@ -491,7 +490,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
   <p>
-    Built with ❤️ using Next.js, Express, and Google Gemini AI
+    Built with ❤️ using Next.js, Express, and OpenRouter AI
   </p>
   <p>
     <a href="https://codebuff.com">Codebuff</a> •

@@ -238,6 +238,10 @@ export class OpenRouterService {
         const isRetryable = this.isRetryableError(error);
 
         if (!isRetryable) {
+          // If the error is already a specific OpenRouterApiError, preserve its code
+          if (error instanceof OpenRouterApiError) {
+            throw error;
+          }
           throw new OpenRouterApiError(
             `Column mapping failed: ${lastError.message}`,
             'AI_MAPPING_ERROR',

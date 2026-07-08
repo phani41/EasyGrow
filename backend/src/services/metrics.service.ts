@@ -46,7 +46,7 @@ export const recordsSkipped = new promClient.Counter({
 export const aiCallsTotal = new promClient.Counter({
   name: 'easygrow_ai_calls_total',
   help: 'Total number of AI API calls made',
-  labelNames: ['provider', 'status'], // 'openrouter', 'gemini'; 'success', 'error'
+  labelNames: ['provider', 'status'], // 'openrouter'; 'success', 'error'
   registers: [register],
 });
 
@@ -105,19 +105,6 @@ export async function metricsHandler(_req: Request, res: Response, _next: NextFu
       error: 'Failed to generate metrics',
     });
   }
-}
-
-/**
- * Get a snapshot of key metrics for health check enrichment.
- */
-export function getMetricsSnapshot(): Record<string, number> {
-  return {
-    uploads: uploadCounter.hashMap['status:success']?.value || 0,
-    imports: importCounter.hashMap['status:success']?.value || 0,
-    recordsProcessed: recordsProcessed.hashMap['']?.value || 0,
-    aiCalls: aiCallsTotal.hashMap['provider:openrouter,status:success']?.value || 0,
-    cacheHits: mappingCacheHits.hashMap['']?.value || 0,
-  };
 }
 
 export { register };
