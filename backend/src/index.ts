@@ -1,6 +1,27 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// ===== Unhandled Promise Rejection Handler =====
+// Must be attached early to catch rejections during module loading.
+// Logs the error and exits so the process manager (Render/Docker) can restart.
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('[FATAL] Unhandled Promise rejection:', reason);
+  process.exit(1);
+});
+
+// ===== Startup Diagnostics =====
+// These console.log calls run before the logger is initialized.
+// They confirm the runtime environment before any other module loads.
+console.log('[Startup] ========================================');
+console.log(`[Startup] NODE_ENV:    ${process.env.NODE_ENV || 'not set (defaulting to development)'}`);
+console.log(`[Startup] LOG_LEVEL:   ${process.env.LOG_LEVEL || 'not set (defaulting to info)'}`);
+console.log(`[Startup] Platform:    ${process.platform} ${process.arch}`);
+console.log(`[Startup] Node.js:     ${process.version}`);
+console.log(`[Startup] PID:         ${process.pid}`);
+console.log(`[Startup] Production:  ${process.env.NODE_ENV === 'production' ? 'YES' : 'NO'}`);
+console.log(`[Startup] CWD:         ${process.cwd()}`);
+console.log('[Startup] ========================================');
+
 import fs from 'fs';
 import express from 'express';
 import compression from 'compression';
