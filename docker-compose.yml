@@ -3,11 +3,11 @@ version: '3.8'
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-      target: production
+      target: runner
     ports:
-      - "${PORT:-5000}:5000"
+      - "${BACKEND_PORT:-5000}:5000"
     environment:
       - NODE_ENV=production
       - PORT=5000
@@ -16,7 +16,7 @@ services:
       - OPENROUTER_MOCK_MODE=${OPENROUTER_MOCK_MODE:-false}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
       - UPLOAD_DIR=/app/uploads
-      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
       - GLOBAL_RATE_LIMIT=${GLOBAL_RATE_LIMIT:-100}
       - UPLOAD_RATE_LIMIT=${UPLOAD_RATE_LIMIT:-10}
       - MAP_RATE_LIMIT=${MAP_RATE_LIMIT:-20}
@@ -37,6 +37,22 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   uploads:

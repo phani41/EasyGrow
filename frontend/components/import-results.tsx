@@ -45,14 +45,17 @@ interface ImportResultsProps {
 // ===== Status Badge Variants =====
 
 const statusVariantMap: Record<CrmStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline'> = {
-  new: 'default',
-  contacted: 'secondary',
-  qualified: 'success',
-  proposal: 'warning',
-  negotiation: 'warning',
-  closed_won: 'success',
-  closed_lost: 'destructive',
-  follow_up: 'outline',
+  GOOD_LEAD_FOLLOW_UP: 'success',
+  DID_NOT_CONNECT: 'warning',
+  BAD_LEAD: 'destructive',
+  SALE_DONE: 'default',
+};
+
+const statusDisplayMap: Record<CrmStatus, string> = {
+  GOOD_LEAD_FOLLOW_UP: 'Good Lead - Follow Up',
+  DID_NOT_CONNECT: 'Did Not Connect',
+  BAD_LEAD: 'Bad Lead',
+  SALE_DONE: 'Sale Done',
 };
 
 // ===== Main Component =====
@@ -191,7 +194,7 @@ export function ImportResults({ records, summary }: ImportResultsProps) {
           const status = info.getValue() as CrmStatus;
           return status ? (
             <Badge variant={statusVariantMap[status] || 'outline'} className="capitalize whitespace-nowrap">
-              {status.replace(/_/g, ' ')}
+              {statusDisplayMap[status] || status.replace(/_/g, ' ')}
             </Badge>
           ) : (
             <span className="text-muted-foreground/50">&mdash;</span>

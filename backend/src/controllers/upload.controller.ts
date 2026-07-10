@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import path from 'path';
 import { CsvService } from '../services/csv.service';
 import { OpenRouterService } from '../services/openrouter.service';
 import { MappingService } from '../services/mapping.service';
@@ -121,7 +120,7 @@ export const mapCsvToCrm = async (
     }
 
     const mappingService = getMappingService();
-    const dataSource = `import:${path.basename(fileName)}`;
+    const dataSource = mappingService.detectDataSourceFromFile(fileName) || '';
 
     // Step 1: Classify dataset
     const classification = mappingService.classifyDataset(headers, rows);
@@ -246,7 +245,7 @@ export const mapCsvToCrmStream = async (
   });
 
   const mappingService = getMappingService();
-  const dataSource = `import:${path.basename(fileName)}`;
+  const dataSource = mappingService.detectDataSourceFromFile(fileName) || '';
 
   const allRecords: CrmRecord[] = [];
   const cumulativeSummary: ImportSummary = {

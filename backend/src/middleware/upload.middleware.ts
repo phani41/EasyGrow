@@ -4,7 +4,7 @@ import { AppError } from '../types';
 import { generateFileId, sanitizeFileName, isAllowedMimeType } from '../utils/helpers';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '10485760', 10); // 10MB
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '52428800', 10); // 50MB for large CSV support
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {

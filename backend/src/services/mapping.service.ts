@@ -1,4 +1,4 @@
-import { CsvRow, CrmRecord, ImportSummary, ColumnMapping, DatasetType, DatasetClassification, MappingResult } from '../types';
+import { CsvRow, CrmRecord, ImportSummary, ColumnMapping, DatasetType, DatasetClassification, MappingResult, DataSource, ALLOWED_DATA_SOURCES } from '../types';
 import { isValidEmail } from '../utils/helpers';
 import { OpenRouterService } from './openrouter.service';
 
@@ -15,7 +15,7 @@ interface MappingCacheEntry {
 // ===== Constants =====
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const RULE_COVERAGE_THRESHOLD = 0.6; // 60% → skip AI (9/14 fields detected by rules is sufficient)
+const RULE_COVERAGE_THRESHOLD = 0.5; // 50% — lowered from 60% to skip AI more often
 const MIN_CONFIDENCE_FOR_CRM = 80;
 const CRM_FIELD_COUNT = 14; // Total number of CRM schema fields
 
@@ -24,66 +24,154 @@ const CRM_FIELD_COUNT = 14; // Total number of CRM schema fields
 interface FieldRule {
   patterns: RegExp[];
   field: string;
-  transform?: (value: string, row: CsvRow, allValues: string[]) => string;
 }
 
 /**
  * Rule-based field detection patterns.
  * Each CRM field has a set of regex patterns to match against CSV headers.
  * Order matters: more specific patterns should come first.
+ * Extended with many common real-world CSV export patterns.
  */
 const FIELD_RULES: FieldRule[] = [
+  // Email
   {
-    patterns: [/^email$/i, /^e[\s-]?mail$/i, /^email[\s_]address$/i, /^e[\s-]?mail[\s_]address$/i, /^mail$/i, /^mail[\s_]id$/i, /email[\s_]id$/i, /e[\s_]mail/i, /^email[\s_]address/i],
+    patterns: [
+      /^email$/i, /^e[\s-]?mail$/i, /^email[\s_]address$/i, /^e[\s-]?mail[\s_]address$/i,
+      /^mail$/i, /^mail[\s_]id$/i, /email[\s_]id$/i, /e[\s_]mail/i, /^email[\s_]address/i,
+      /^email[\s_]addresses$/i, /^contact[\s_]email$/i, /^email[\s_]primary$/i,
+      /^primary[\s_]email$/i, /^correo$/i, /^correo[\s_]electronico$/i,
+    ],
     field: 'email',
   },
+  // Phone / Mobile
   {
-    patterns: [/^phone$/i, /^phone[\s_]number$/i, /^mobile$/i, /^mobile[\s_]number$/i, /^contact$/i, /^contact[\s_]no$/i, /^telephone$/i, /^tel$/i, /^cell$/i, /^phone[\s_]no$/i, /^mobile[\s_]no$/i, /^contact[\s_]number$/i],
+    patterns: [
+      /^phone$/i, /^phone[\s_]number$/i, /^mobile$/i, /^mobile[\s_]number$/i,
+      /^contact$/i, /^contact[\s_]no$/i, /^telephone$/i, /^tel$/i, /^cell$/i,
+      /^phone[\s_]no$/i, /^mobile[\s_]no$/i, /^contact[\s_]number$/i,
+      /^phone[\s_]1$/i, /^phone[\s_]2$/i, /^alternate[\s_]phone$/i,
+      /^work[\s_]phone$/i, /^home[\s_]phone$/i, /^mobile[\s_]phone$/i,
+      /^telefono$/i, /^celular$/i, /^cel$/i,
+    ],
     field: 'mobile_without_country_code',
   },
+  // Country Code
   {
-    patterns: [/^country[\s_]code$/i, /^dial[\s_]code$/i, /^phone[\s_]code$/i],
+    patterns: [
+      /^country[\s_]code$/i, /^dial[\s_]code$/i, /^phone[\s_]code$/i,
+      /^area[\s_]code$/i, /^calling[\s_]code$/i, /^isd[\s_]code$/i,
+      /^phone[\s_]prefix$/i, /^country[\s_]prefix$/i,
+    ],
     field: 'country_code',
   },
+  // Name
   {
-    patterns: [/^full[\s_]name$/i, /^customer[\s_]name$/i, /^person[\s_]name$/i, /^contact[\s_]name$/i, /^applicant[\s_]name$/i, /^name$/i, /^first[\s_]name$/i, /^last[\s_]name$/i, /^firstname$/i, /^lastname$/i, /^fullname$/i, /^applicant$/i],
+    patterns: [
+      /^full[\s_]name$/i, /^customer[\s_]name$/i, /^person[\s_]name$/i,
+      /^contact[\s_]name$/i, /^applicant[\s_]name$/i, /^name$/i,
+      /^first[\s_]name$/i, /^last[\s_]name$/i, /^firstname$/i, /^lastname$/i,
+      /^fullname$/i, /^applicant$/i, /^given[\s_]name$/i, /^family[\s_]name$/i,
+      /^surname$/i, /^forename$/i, /^middle[\s_]name$/i,
+      /^first[\s_]given[\s_]name$/i, /^last[\s_]family[\s_]name$/i,
+      /^contact[\s_]person$/i, /^point[\s_]of[\s_]contact$/i,
+    ],
     field: 'name',
   },
+  // Company
   {
-    patterns: [/^company$/i, /^company[\s_]name$/i, /^organization$/i, /^organization[\s_]name$/i, /^firm$/i, /^business$/i, /^employer$/i, /^org$/i],
+    patterns: [
+      /^company$/i, /^company[\s_]name$/i, /^organization$/i,
+      /^organization[\s_]name$/i, /^firm$/i, /^business$/i, /^employer$/i,
+      /^org$/i, /^account$/i, /^account[\s_]name$/i, /^client$/i,
+      /^client[\s_]name$/i, /^vendor$/i, /^vendor[\s_]name$/i,
+      /^workspace$/i, /^team$/i, /^department$/i, /^branch$/i,
+      /^legal[\s_]entity$/i, /^registered[\s_]company$/i,
+    ],
     field: 'company',
   },
+  // City
   {
-    patterns: [/^city$/i, /^town$/i, /^municipality$/i, /^location[\s_]city/i, /^city[\s_]town$/i],
+    patterns: [
+      /^city$/i, /^town$/i, /^municipality$/i, /^location[\s_]city/i,
+      /^city[\s_]town$/i, /^city[\s_]name$/i, /^locality$/i,
+      /^suburb$/i, /^district$/i, /^sector$/i, /^zone$/i,
+    ],
     field: 'city',
   },
+  // State
   {
-    patterns: [/^state$/i, /^province$/i, /^region$/i, /^county$/i, /^state[\s_]province$/i],
+    patterns: [
+      /^state$/i, /^province$/i, /^region$/i, /^county$/i,
+      /^state[\s_]province$/i, /^state[\s_]region$/i, /^prefecture$/i,
+      /^territory$/i, /^administrative[\s_]area/i,
+    ],
     field: 'state',
   },
+  // Country
   {
-    patterns: [/^country$/i, /^nation$/i, /^country[\s_]name$/i, /^nationality$/i, /^country[\s_]region$/i],
+    patterns: [
+      /^country$/i, /^nation$/i, /^country[\s_]name$/i, /^nationality$/i,
+      /^country[\s_]region$/i, /^sovereign[\s_]state$/i,
+    ],
     field: 'country',
   },
+  // Lead Owner
   {
-    patterns: [/^lead[\s_]owner$/i, /^owner$/i, /^assigned[\s_]to$/i, /^sales[\s_]rep$/i, /^account[\s_]manager$/i, /^sales[\s_]representative$/i],
+    patterns: [
+      /^lead[\s_]owner$/i, /^owner$/i, /^assigned[\s_]to$/i,
+      /^sales[\s_]rep$/i, /^account[\s_]manager$/i,
+      /^sales[\s_]representative$/i, /^agent$/i, /^handler$/i,
+      /^responsible$/i, /^salesperson$/i, /^sales[\s_]person$/i,
+      /^rep$/i, /^assignee$/i, /^managed[\s_]by$/i,
+    ],
     field: 'lead_owner',
   },
+  // CRM Status
   {
-    patterns: [/^crm[\s_]status$/i, /^lead[\s_]status$/i, /^status$/i],
+    patterns: [
+      /^crm[\s_]status$/i, /^lead[\s_]status$/i, /^status$/i,
+      /^pipeline[\s_]stage$/i, /^deal[\s_]stage$/i, /^stage$/i,
+      /^opportunity[\s_]stage$/i, /^sales[\s_]stage$/i,
+      /^lead[\s_]stage$/i, /^lifecycle[\s_]stage$/i,
+    ],
     field: 'crm_status',
   },
+  // Description
   {
-    patterns: [/^description$/i, /^notes$/i, /^note$/i, /^comments$/i, /^comment$/i, /^additional[\s_]info/i, /^additional[\s_]information/i],
+    patterns: [
+      /^description$/i, /^notes$/i, /^note$/i, /^comments$/i,
+      /^comment$/i, /^additional[\s_]info/i, /^additional[\s_]information/i,
+      /^remarks$/i, /^details$/i, /^summary$/i, /^feedback$/i,
+      /^reason$/i, /^observations$/i, /^narration$/i,
+    ],
     field: 'description',
   },
+  // Created At / Date
   {
-    patterns: [/^created[\s_]at$/i, /^created$/i, /^date$/i, /^created[\s_]date$/i, /^timestamp$/i, /^registration[\s_]date$/i, /^signup[\s_]date$/i, /^sign.?up[\s_]date/i],
+    patterns: [
+      /^created[\s_]at$/i, /^created$/i, /^date$/i, /^created[\s_]date$/i,
+      /^timestamp$/i, /^registration[\s_]date$/i, /^signup[\s_]date$/i,
+      /^sign.?up[\s_]date/i, /^entry[\s_]date$/i, /^submission[\s_]date$/i,
+      /^date[\s_]created$/i, /^created[\s_]on$/i, /^added[\s_]on$/i,
+      /^added[\s_]date$/i, /^datetime$/i, /^date[\s_]time$/i,
+    ],
     field: 'created_at',
   },
+  // Possession Time
   {
-    patterns: [/^possession[\s_]time$/i, /^possession$/i],
+    patterns: [
+      /^possession[\s_]time$/i, /^possession$/i, /^tenure$/i,
+      /^ownership[\s_]period$/i, /^holding[\s_]period$/i,
+      /^occupancy$/i, /^possession[\s_]date$/i,
+    ],
     field: 'possession_time',
+  },
+  // CRM Note (crm_note-specific only — general text patterns like notes/comments are handled by description)
+  {
+    patterns: [
+      /^crm[\s_]note$/i, /^crm[\s_]notes$/i,
+    ],
+    field: 'crm_note',
   },
 ];
 
@@ -92,35 +180,46 @@ const FIELD_RULES: FieldRule[] = [
 interface DatasetRule {
   type: DatasetType;
   keywords: string[];
-  weight: number; // How strongly this indicates the type
+  weight: number;
 }
 
 const DATASET_RULES: DatasetRule[] = [
-  { type: 'CRM Leads', keywords: ['email', 'e-mail', 'mail', 'phone', 'mobile', 'name', 'company', 'lead', 'contact'], weight: 1 },
-  { type: 'Customer Database', keywords: ['customer', 'account', 'membership', 'customer id', 'member', 'subscription'], weight: 1 },
-  { type: 'Shopping Dataset', keywords: ['product', 'price', 'quantity', 'order', 'category', 'sku', 'item', 'total', 'subtotal', 'shipping', 'payment'], weight: 1 },
-  { type: 'Financial Dataset', keywords: ['transaction', 'amount', 'payment', 'invoice', 'tax', 'balance', 'account', 'debit', 'credit', 'fee', 'interest'], weight: 1 },
-  { type: 'Student Dataset', keywords: ['student', 'grade', 'course', 'class', 'subject', 'enrollment', 'gpa', 'semester', 'exam', 'score'], weight: 1 },
-  { type: 'Employee Dataset', keywords: ['employee', 'salary', 'department', 'position', 'hire', 'termination', 'payroll', 'manager', 'title', 'job'], weight: 1 },
+  { type: 'CRM Leads', keywords: ['email', 'e-mail', 'mail', 'phone', 'mobile', 'name', 'company', 'lead', 'contact', 'owner', 'status', 'pipeline'], weight: 1 },
+  { type: 'Customer Database', keywords: ['customer', 'account', 'membership', 'customer id', 'member', 'subscription', 'loyalty'], weight: 1 },
+  { type: 'Shopping Dataset', keywords: ['product', 'price', 'quantity', 'order', 'category', 'sku', 'item', 'total', 'subtotal', 'shipping', 'payment', 'cart', 'invoice', 'billing'], weight: 1 },
+  { type: 'Financial Dataset', keywords: ['transaction', 'amount', 'payment', 'invoice', 'tax', 'balance', 'account', 'debit', 'credit', 'fee', 'interest', 'loan', 'emi', 'installment'], weight: 1 },
+  { type: 'Student Dataset', keywords: ['student', 'grade', 'course', 'class', 'subject', 'enrollment', 'gpa', 'semester', 'exam', 'score', 'roll', 'admission'], weight: 1 },
+  { type: 'Employee Dataset', keywords: ['employee', 'salary', 'department', 'position', 'hire', 'termination', 'payroll', 'manager', 'title', 'job', 'designation', 'ctc'], weight: 1 },
+  { type: 'Property Dataset', keywords: ['property', 'plot', 'sqft', 'area', 'land', 'building', 'apartment', 'flat', 'unit', 'floor', 'bedroom', 'bathroom', 'amenities', 'facing', 'possession', 'carpet'], weight: 1 },
+  { type: 'Marketing Dataset', keywords: ['campaign', 'source', 'medium', 'channel', 'click', 'impression', 'conversion', 'ad', 'traffic', 'lead source', 'utm', 'referral'], weight: 1 },
 ];
 
 // ===== Local Transformation Functions =====
 
 /**
- * Map CRM status text to allowed values.
+ * Map CRM status text to assignment-required values.
  */
 function normalizeCrmStatus(value: string): string {
   if (!value) return '';
   const v = value.toLowerCase().trim();
 
-  if (/^(new|lead|uncontacted)$/i.test(v)) return 'new';
-  if (/^(contacted|reached)$/i.test(v)) return 'contacted';
-  if (/^(qualified|interested|hot|warm)$/i.test(v)) return 'qualified';
-  if (/^(proposal|quote|quoted)$/i.test(v)) return 'proposal';
-  if (/^(negotiation|undecided|reviewing)$/i.test(v)) return 'negotiation';
-  if (/^(closed.?won|won|customer|sold)$/i.test(v)) return 'closed_won';
-  if (/^(closed.?lost|lost|dead)$/i.test(v)) return 'closed_lost';
-  if (/^(follow.?up|followup)$/i.test(v)) return 'follow_up';
+  // Map common status texts to assignment statuses
+  // GOOD_LEAD_FOLLOW_UP
+  if (/^(new|lead|uncontacted|fresh|good|qualified|interested|hot|warm|follow.?up|followup|pending|open)$/i.test(v)) return 'GOOD_LEAD_FOLLOW_UP';
+  // DID_NOT_CONNECT
+  if (/^(contacted|reached|no.?answer|no.?response|unreachable|not.?connected|busy|switched.?off|wrong.?number|invalid.?contact)$/i.test(v)) return 'DID_NOT_CONNECT';
+  // BAD_LEAD
+  if (/^(bad|not.?interested|not.?qualified|disqualified|closed.?lost|lost|dead|rejected|unsubscribe|spam|junk|not.?now|never.?contact)$/i.test(v)) return 'BAD_LEAD';
+  // SALE_DONE
+  if (/^(sale.?done|won|closed.?won|customer|sold|converted|deal.?closed|purchased|booked|registered|done|completed|success)$/i.test(v)) return 'SALE_DONE';
+
+  // If value looks like the old status system, try to convert
+  if (v === 'new' || v === 'lead' || v === 'uncontacted') return 'GOOD_LEAD_FOLLOW_UP';
+  if (v === 'contacted' || v === 'reached') return 'DID_NOT_CONNECT';
+  if (v === 'qualified' || v === 'interested' || v === 'proposal' || v === 'negotiation') return 'GOOD_LEAD_FOLLOW_UP';
+  if (v === 'closed_lost' || v === 'bad') return 'BAD_LEAD';
+  if (v === 'closed_won' || v === 'sold') return 'SALE_DONE';
+  if (v === 'follow_up') return 'GOOD_LEAD_FOLLOW_UP';
 
   return '';
 }
@@ -153,9 +252,8 @@ function normalizeDate(value: string): string {
   const usDateMatch = trimmed.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})$/);
   if (usDateMatch) {
     let [, mon, day, year] = usDateMatch;
-    // Heuristic: if first part > 12, it's DD/MM (not US)
     if (parseInt(mon, 10) > 12) {
-      [mon, day] = [day, mon]; // Swap — it's DD/MM
+      [mon, day] = [day, mon];
     }
     if (year.length === 2) {
       year = '20' + year;
@@ -176,7 +274,7 @@ function normalizeDate(value: string): string {
     return new Date(ts).toISOString();
   }
 
-  return v; // Return as-is if we can't parse
+  return v;
 }
 
 /**
@@ -192,19 +290,32 @@ function cleanPhone(value: string): string {
  */
 function extractCountryCode(digits: string): { countryCode: string; phoneDigits: string } {
   if (digits.length > 10) {
-    // Could have country code prefix
-    // Common country code lengths: 1-3 digits
-    // Try extracting 1-3 digit prefix
     for (let len = 1; len <= 3; len++) {
       const prefix = digits.substring(0, len);
       const rest = digits.substring(len);
-      // If the rest looks like a valid phone number (7-15 digits)
       if (rest.length >= 7 && rest.length <= 15) {
         return { countryCode: prefix, phoneDigits: rest };
       }
     }
   }
   return { countryCode: '', phoneDigits: digits };
+}
+
+/**
+ * Detect data source from filename patterns.
+ * Maps CSV filenames to the assignment-required data sources.
+ */
+function detectDataSource(fileName: string): DataSource {
+  if (!fileName) return '';
+  const name = fileName.toLowerCase().trim();
+
+  if (name.includes('leads_on_demand') || name.includes('leadsondemand') || name.includes('leads on demand')) return 'leads_on_demand';
+  if (name.includes('meridian_tower') || name.includes('meridiantower') || name.includes('meridian tower')) return 'meridian_tower';
+  if (name.includes('eden_park') || name.includes('edenpark') || name.includes('eden park')) return 'eden_park';
+  if (name.includes('varah_swamy') || name.includes('varahswamy') || name.includes('varah swamy') || name.includes('varahaswamy')) return 'varah_swamy';
+  if (name.includes('sarjapur_plots') || name.includes('sarjapurplots') || name.includes('sarjapur plots') || name.includes('sarjapur')) return 'sarjapur_plots';
+
+  return '';
 }
 
 // ===== Helper Functions =====
@@ -221,27 +332,21 @@ function getCacheKey(headers: string[]): string {
 
 // ===== Dataset Classification =====
 
-/**
- * Classify the dataset type based on headers and sample data.
- * Uses keyword matching with scoring per dataset type.
- */
 function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassification {
   const headerLower = headers.map((h) => h.toLowerCase().trim());
   const scores = new Map<DatasetType, number>();
 
-  // Initialize scores
   for (const rule of DATASET_RULES) {
     scores.set(rule.type, 0);
   }
 
-  // Score based on header keyword matches
   for (const rule of DATASET_RULES) {
     let matchCount = 0;
     for (const keyword of rule.keywords) {
       for (const header of headerLower) {
         if (header.includes(keyword) || header.replace(/[\s_-]/g, '').includes(keyword.replace(/[\s_-]/g, ''))) {
           matchCount++;
-          break; // Only count once per keyword even if it matches multiple headers
+          break;
         }
       }
     }
@@ -249,7 +354,6 @@ function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassi
     scores.set(rule.type, score * rule.weight);
   }
 
-  // Find the best match
   let bestType: DatasetType = 'Unknown';
   let bestScore = 0;
 
@@ -260,7 +364,7 @@ function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassi
     }
   }
 
-  // CRM-specific boost: if email and phone/name are detected, boost CRM score
+  // CRM-specific boost
   const hasEmail = headerLower.some((h) => /^email/i.test(h) || /^e[\s-]?mail/i.test(h));
   const hasPhone = headerLower.some((h) => /^phone/i.test(h) || /^mobile/i.test(h));
   const hasName = headerLower.some((h) => /^name/i.test(h) || /full.?name/i.test(h));
@@ -274,10 +378,8 @@ function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassi
     }
   }
 
-  // Normalize confidence
-  let confidence = Math.min(100, bestScore);
+  const confidence = Math.min(100, bestScore);
 
-  // Build reasoning
   const matchedKeywords = DATASET_RULES
     .filter((r) => r.type === bestType)
     .flatMap((r) => r.keywords)
@@ -297,16 +399,10 @@ function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassi
 
 // ===== Rule-Based Field Detection =====
 
-/**
- * Detect CRM fields using regex rules on CSV headers.
- * Returns the detected mapping and coverage percentage.
- */
 function detectFieldsByRules(headers: string[]): { mapping: ColumnMapping; coverage: number; skippedFields: string[] } {
   const mapping: ColumnMapping = {};
   const assignedFields = new Set<string>();
-  const usedHeaders = new Set<string>();
 
-  // First pass: match all headers to rules
   for (const header of headers) {
     let matched = false;
     for (const rule of FIELD_RULES) {
@@ -314,7 +410,6 @@ function detectFieldsByRules(headers: string[]): { mapping: ColumnMapping; cover
         if (pattern.test(header.trim())) {
           mapping[header] = rule.field;
           assignedFields.add(rule.field);
-          usedHeaders.add(header);
           matched = true;
           break;
         }
@@ -326,10 +421,8 @@ function detectFieldsByRules(headers: string[]): { mapping: ColumnMapping; cover
     }
   }
 
-  // Calculate coverage: ratio of non-empty mappings to total CRM fields
   const nonEmptyMappings = assignedFields.size;
   const coverage = nonEmptyMappings / CRM_FIELD_COUNT;
-
   const skippedFields = headers.filter((h) => mapping[h] === '');
 
   return { mapping, coverage, skippedFields };
@@ -337,10 +430,6 @@ function detectFieldsByRules(headers: string[]): { mapping: ColumnMapping; cover
 
 // ===== Local Record Transformation =====
 
-/**
- * Transform a single CSV row into a CRM record using the column mapping.
- * All validation, normalization, and transformation happens locally.
- */
 function transformRow(
   row: CsvRow,
   headers: string[],
@@ -364,7 +453,6 @@ function transformRow(
     }
   }
 
-  // Extract primary and extra values
   const getPrimary = (field: string): string => {
     const vals = fieldValues.get(field);
     return vals && vals.length > 0 ? vals[0] : '';
@@ -382,10 +470,9 @@ function transformRow(
   const rawEmail = getPrimary('email').toLowerCase().trim();
   const email = isValidEmail(rawEmail) ? rawEmail : '';
 
-  // Name (combine if multiple sources, e.g. first_name + last_name)
+  // Name (combine if multiple sources)
   const nameParts = fieldValues.get('name') || [];
   let name = nameParts.join(' ').trim();
-  // Remove excessive whitespace
   name = name.replace(/\s+/g, ' ');
 
   // Phone
@@ -406,7 +493,7 @@ function transformRow(
   const hasContact = email !== '' || phoneDigitsFinal !== '';
 
   if (!hasContact) {
-    return null; // Skip this row
+    return null;
   }
 
   // Company
@@ -445,7 +532,7 @@ function transformRow(
   const extraPhones = getExtra('mobile_without_country_code', 'mobile_without_country_code');
   if (extraPhones) noteParts.push(`Extra phone: ${extraPhones}`);
 
-  // Extra data from unmapped or crm_note-mapped headers
+  // Extra data from crm_note-mapped headers
   const noteValues = fieldValues.get('crm_note');
   if (noteValues && noteValues.length > 0) {
     noteParts.push(noteValues.join(', '));
@@ -466,7 +553,7 @@ function transformRow(
     lead_owner: leadOwner,
     crm_status: crmStatus as CrmRecord['crm_status'],
     crm_note: crmNote,
-    data_source: dataSource,
+    data_source: dataSource as CrmRecord['data_source'],
     possession_time: possessionTime,
     description,
   };
@@ -481,18 +568,23 @@ export class MappingService {
   constructor(openrouterService: OpenRouterService) {
     this.mappingCache = new Map();
     this.openrouterService = openrouterService;
-
-    // Periodic cache cleanup
     setInterval(() => this.cleanupCache(), 10 * 60 * 1000).unref();
   }
 
   /**
+   * Detect the data source from the file name.
+   * Validates against the allowed list; returns '' for unknown sources.
+   */
+  detectDataSourceFromFile(fileName: string): DataSource {
+    const detected = detectDataSource(fileName);
+    if (detected && (ALLOWED_DATA_SOURCES as readonly string[]).includes(detected)) {
+      return detected;
+    }
+    return '';
+  }
+
+  /**
    * Main entry point: get column mapping for a CSV dataset.
-   * 1. Check cache
-   * 2. Run rule-based detection
-   * 3. If rules cover >70% of fields, use rules (skip AI)
-   * 4. Otherwise, call AI for mapping
-   * 5. Cache result
    */
   async getMapping(
     headers: string[],
@@ -523,7 +615,6 @@ export class MappingService {
         `[MappingService] Rule-based detection covered ${(coverage * 100).toFixed(0)}% of fields — skipping AI`
       );
 
-      // Also classify dataset
       const classification = classifyDataset(headers, rows.slice(0, 5));
       const confidence = Math.round(coverage * 100);
 
@@ -536,7 +627,6 @@ export class MappingService {
         cacheHit: false,
       };
 
-      // Cache it
       this.mappingCache.set(cacheKey, {
         mapping: result.mapping,
         datasetType: result.datasetType,
@@ -556,11 +646,10 @@ export class MappingService {
     const sampleRows = rows.slice(0, 5);
     const aiResult = await this.openrouterService.getColumnMapping(headers, sampleRows);
 
-    // Merge AI mapping with rule-based detection for headers the AI might have missed
+    // Merge AI mapping with rule-based detection
     const mergedMapping: ColumnMapping = { ...aiResult.mapping };
     for (const header of headers) {
       if (!(header in mergedMapping) || mergedMapping[header] === '') {
-        // Use rule-based result as fallback
         if (ruleMapping[header] && ruleMapping[header] !== '') {
           mergedMapping[header] = ruleMapping[header];
         } else if (!(header in mergedMapping)) {
@@ -580,7 +669,6 @@ export class MappingService {
       cacheHit: false,
     };
 
-    // 5. Cache result
     this.mappingCache.set(cacheKey, {
       mapping: result.mapping,
       datasetType: result.datasetType,
@@ -592,22 +680,10 @@ export class MappingService {
     return result;
   }
 
-  /**
-   * Classify the dataset type from headers and sample rows.
-   * Used before mapping to check compatibility.
-   */
   classifyDataset(headers: string[], rows: CsvRow[]): DatasetClassification {
     return classifyDataset(headers, rows.slice(0, 5));
   }
 
-  /**
-   * Check if the dataset is compatible with CRM import.
-   * Returns true if:
-   * 1. Dataset type is CRM-compatible (CRM Leads, Customer Database, or Unknown)
-   * 2. Required fields (email, phone) are present in the mapping
-   *
-   * OR if the dataset type is non-CRM but confidence is low (< 80%)
-   */
   isDatasetCompatible(classification: DatasetClassification): { compatible: boolean; reason?: string } {
     const incompatibleTypes: DatasetType[] = ['Shopping Dataset', 'Financial Dataset', 'Student Dataset', 'Employee Dataset'];
 
@@ -621,10 +697,6 @@ export class MappingService {
     return { compatible: true };
   }
 
-  /**
-   * Check if required CRM fields exist in the mapping.
-   * Required: email OR phone must map to something.
-   */
   hasRequiredFields(mapping: ColumnMapping): { valid: boolean; missing: string[] } {
     const missing: string[] = [];
     const mappedFields = Object.values(mapping);
@@ -639,10 +711,6 @@ export class MappingService {
     };
   }
 
-  /**
-   * Apply a column mapping to ALL rows locally — NO AI calls.
-   * This is where the bulk transformation happens.
-   */
   applyMapping(
     rows: CsvRow[],
     headers: string[],
@@ -682,10 +750,6 @@ export class MappingService {
     };
   }
 
-  /**
-   * Apply mapping in local batches (for SSE streaming progress).
-   * Processes rows in chunks and invokes callbacks for each chunk.
-   */
   applyMappingInBatches(
     rows: CsvRow[],
     headers: string[],
@@ -734,9 +798,6 @@ export class MappingService {
     return { records: allRecords, summary: cumulativeSummary };
   }
 
-  /**
-   * Clean up expired cache entries.
-   */
   private cleanupCache(): void {
     const now = Date.now();
     for (const [key, entry] of this.mappingCache.entries()) {
@@ -746,9 +807,6 @@ export class MappingService {
     }
   }
 
-  /**
-   * Get cache stats for monitoring.
-   */
   getCacheStats(): { size: number; entries: Array<{ datasetType: DatasetType; age: number }> } {
     const now = Date.now();
     const entries = Array.from(this.mappingCache.entries()).map(([key, entry]) => ({
@@ -761,9 +819,6 @@ export class MappingService {
     return { size: this.mappingCache.size, entries };
   }
 
-  /**
-   * Clear the mapping cache.
-   */
   clearCache(): void {
     this.mappingCache.clear();
     console.log('[MappingService] Cache cleared');

@@ -225,7 +225,7 @@ export function UploadZone({
                   >
                     browse files
                   </button>
-                  <span>&middot; CSV up to 10 MB</span>
+                  <span>&middot; CSV up to 50 MB</span>
                 </p>
               </div>
               <div className="flex items-center gap-4 text-[11px] text-muted-foreground/60 mt-1">

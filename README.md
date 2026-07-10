@@ -194,7 +194,7 @@ All environment variables:
 | `OPENROUTER_MAX_TOKENS` | `4096` | Max output tokens per batch |
 | `CORS_ORIGIN` | `http://localhost:3000` | Allowed frontend origin |
 | `PORT` | `5000` | Server port |
-| `MAX_FILE_SIZE` | `10485760` | Max upload size in bytes (10 MB) |
+| `MAX_FILE_SIZE` | `52428800` | Max upload size in bytes (50 MB) |
 | `LOG_LEVEL` | `debug` | Pino log level (trace, debug, info, warn, error, fatal) |
 | `GLOBAL_RATE_LIMIT` | `100` | Max requests per 15 min |
 | `UPLOAD_RATE_LIMIT` | `10` | Max uploads per 15 min |
@@ -256,7 +256,7 @@ Upload a CSV file for parsing and preview.
 **Request:** `multipart/form-data`
 | Field | Type | Description |
 |-------|------|-------------|
-| `file` | File | CSV file (max 10 MB) |
+| `file` | File | CSV file (max 50 MB) |
 
 **Response `200`:**
 ```json

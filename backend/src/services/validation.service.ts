@@ -1,7 +1,7 @@
 import { CsvRow, ValidationError, ValidationResult } from '../types';
 
-const MAX_COLUMNS = 100;
-const MAX_ROWS = 100_000;
+const MAX_COLUMNS = 200;
+const MAX_ROWS = 200_000;
 const MIN_COLUMNS = 1;
 const MIN_ROWS = 1;
 

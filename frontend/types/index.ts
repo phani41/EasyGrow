@@ -1,14 +1,18 @@
 // ===== Crm Types =====
 
 export type CrmStatus =
-  | 'new'
-  | 'contacted'
-  | 'qualified'
-  | 'proposal'
-  | 'negotiation'
-  | 'closed_won'
-  | 'closed_lost'
-  | 'follow_up';
+  | 'GOOD_LEAD_FOLLOW_UP'
+  | 'DID_NOT_CONNECT'
+  | 'BAD_LEAD'
+  | 'SALE_DONE';
+
+export type DataSource =
+  | 'leads_on_demand'
+  | 'meridian_tower'
+  | 'eden_park'
+  | 'varah_swamy'
+  | 'sarjapur_plots'
+  | '';
 
 export interface CrmRecord {
   created_at: string;
@@ -23,7 +27,7 @@ export interface CrmRecord {
   lead_owner: string;
   crm_status: CrmStatus | '';
   crm_note: string;
-  data_source: string;
+  data_source: DataSource;
   possession_time: string;
   description: string;
 }
@@ -53,6 +57,8 @@ export type DatasetType =
   | 'Financial Dataset'
   | 'Student Dataset'
   | 'Employee Dataset'
+  | 'Property Dataset'
+  | 'Marketing Dataset'
   | 'Unknown';
 
 export interface MapResponseData {
@@ -60,7 +66,6 @@ export interface MapResponseData {
   totalProcessed: number;
   totalBatches: number;
   summary: ImportSummary;
-  // New engine fields (optional — backward compatible)
   datasetType?: DatasetType;
   confidence?: number;
   usedRuleBased?: boolean;

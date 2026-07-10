@@ -1,0 +1,24 @@
+# Render.com Infrastructure as Code Configuration
+# This tells Render to deploy the backend service from the backend/ subdirectory.
+# No manual dashboard configuration needed — Render auto-detects this file.
+
+services:
+  # Backend API Service
+  - type: web
+    name: easygrow-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: CORS_ORIGIN
+        sync: false # Set this in Render dashboard to your frontend URL
+      - key: OPENROUTER_API_KEY
+        sync: false # Set this in Render dashboard
+      - key: MAX_FILE_SIZE
+        value: "52428800"

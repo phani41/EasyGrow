@@ -25,10 +25,19 @@ export class CsvService {
 
       fs.createReadStream(filePath, { encoding: 'utf-8' })
         .on('error', (err) => reject(new Error(`Failed to read file: ${err.message}`)))
-        .pipe(csv())
+        .pipe(csv({
+          mapHeaders: ({ header }: { header: string }) => {
+            // BOM removal + trim
+            return header.replace(/^\uFEFF/, '').trim();
+          },
+          mapValue: ({ value }: { value: string }) => {
+            // Trim each value; return empty string for undefined/null
+            return (value || '').trim();
+          },
+        }))
         .on('headers', (headers: string[]) => {
           for (const h of headers) {
-            const trimmed = h.trim();
+            const trimmed = h.replace(/^\uFEFF/, '').trim();
             if (!headersSet.has(trimmed)) {
               headersSet.add(trimmed);
               headerOrder.push(trimmed);
@@ -36,10 +45,11 @@ export class CsvService {
           }
         })
         .on('data', (row: CsvRow) => {
-          // Trim all values
+          // BOM-safe key trimming
           const cleanedRow: CsvRow = {};
           for (const [key, value] of Object.entries(row)) {
-            cleanedRow[key.trim()] = value?.trim() || '';
+            const cleanKey = key.replace(/^\uFEFF/, '').trim();
+            cleanedRow[cleanKey] = (value || '').trim();
           }
           rows.push(cleanedRow);
         })
