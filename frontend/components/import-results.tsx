@@ -241,7 +241,7 @@ export function ImportResults({ records, summary }: ImportResultsProps) {
         size: 200,
         minSize: 100,
       }),
-    ];
+    ] as ColumnDef<CrmRecord>[];
   }, []);
 
   const table = useReactTable({
