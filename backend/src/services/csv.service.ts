@@ -30,10 +30,6 @@ export class CsvService {
             // BOM removal + trim
             return header.replace(/^\uFEFF/, '').trim();
           },
-          mapValue: ({ value }: { value: string }) => {
-            // Trim each value; return empty string for undefined/null
-            return (value || '').trim();
-          },
         }))
         .on('headers', (headers: string[]) => {
           for (const h of headers) {
