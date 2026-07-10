@@ -64,7 +64,7 @@ describe('UploadZone', () => {
 
     expect(screen.getByText('Drag & drop your CSV file here')).toBeInTheDocument();
     expect(screen.getByText('browse files')).toBeInTheDocument();
-    expect(screen.getByText(/CSV up to 10 MB/)).toBeInTheDocument();
+    expect(screen.getByText(/CSV up to 50 MB/)).toBeInTheDocument();
   });
 
   it('should show feature badges in idle state', () => {

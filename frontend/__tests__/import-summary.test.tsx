@@ -3,10 +3,11 @@ import { render, screen } from '@testing-library/react';
 import { ImportSummaryCard } from '@/components/import-summary';
 import type { ImportSummary } from '@/types';
 
-// Mock requestAnimationFrame for AnimatedCounter
+// Mock requestAnimationFrame for AnimatedCounter — complete animation in one frame
 beforeEach(() => {
+  vi.spyOn(performance, 'now').mockReturnValue(0);
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-    cb(1000); // Simulate animation completion
+    cb(1000); // elapsed = 1000 - 0 = 1000 >= duration, progress = 1
     return 1;
   });
   vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
@@ -160,8 +161,10 @@ describe('ImportSummaryCard', () => {
 
   it('should show correct data quality score percentage', () => {
     // 80 emails + 60 phones out of (100 * 2) = 200 possible = 70%
+    // Must override skippedNoContact to 0 so totalContacts = 100
     render(<ImportSummaryCard summary={createSummary({
       totalProcessed: 100,
+      skippedNoContact: 0,
       emailsExtracted: 80,
       phonesExtracted: 60,
     })} />);

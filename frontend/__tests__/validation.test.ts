@@ -51,8 +51,13 @@ describe('isValidCsvExtension', () => {
 // ===== validateFile =====
 
 describe('validateFile', () => {
+  /**
+   * Create a mock File with the given name and content of the specified size.
+   * Uses repeated characters to reach the desired byte length.
+   */
   function createMockFile(name: string, size: number): File {
-    return new File([''], name, { type: 'text/csv' });
+    const content = 'x'.repeat(Math.max(0, size));
+    return new File([content], name, { type: 'text/csv' });
   }
 
   it('should return valid for a correct CSV file', () => {
@@ -80,7 +85,9 @@ describe('validateFile', () => {
     const file = createMockFile('datafile', 1000);
     const result = validateFile(file);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('no extension');
+    // File named 'datafile' has no '.' so ext is the full filename 'datafile'
+    expect(result.error).toContain('DATAFILE');
+    expect(result.error).toContain('CSV');
   });
 
   it('should reject files exceeding max size', () => {

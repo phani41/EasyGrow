@@ -76,16 +76,15 @@ describe('ErrorBoundary', () => {
     // Should show error UI
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-    // Click Try again to reset
-    fireEvent.click(screen.getByRole('button', { name: /Try again/i }));
-
-    // After reset, the error state is cleared. Since BadComponent will throw again
-    // on re-render, we need to swap it with GoodComponent after the reset.
+    // Swap to GoodComponent first (state is still hasError:true, shows error UI)
     rerender(
       <ErrorBoundary>
         <GoodComponent />
       </ErrorBoundary>
     );
+
+    // Now click Try again to reset — GoodComponent won't throw
+    fireEvent.click(screen.getByRole('button', { name: /Try again/i }));
 
     expect(screen.getByTestId('good')).toBeInTheDocument();
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();

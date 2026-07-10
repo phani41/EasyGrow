@@ -73,7 +73,7 @@ describe('CellDetailModal', () => {
     expect(screen.getByText('Record # 5 · Email')).toBeInTheDocument();
     // When using Record # label, the column name should also appear as a bold title
     // (two elements contain "Email": the subtitle and the bold title)
-    const emailElements = screen.getAllByText('Email');
+    const emailElements = screen.getAllByText(/Email/);
     expect(emailElements.length).toBe(2);
   });
 
@@ -81,7 +81,7 @@ describe('CellDetailModal', () => {
     render(<CellDetailModal {...defaultProps} label="Row" />);
 
     // "Row" is the default label, so the column name should NOT appear as a separate heading
-    const emailInstances = screen.getAllByText('Email');
+    const emailInstances = screen.getAllByText(/Email/);
     // Email should ONLY appear in the subtitle line, not as a separate heading
     // The subtitle has "Row 5 · Email" so there's one instance
     expect(emailInstances.length).toBe(1);
