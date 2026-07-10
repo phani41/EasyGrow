@@ -104,6 +104,8 @@ function EmptyState() {
 
 // ===== Main Component =====
 
+type CsvRow = Record<string, string | undefined>;
+
 export function CsvPreview({
   headers,
   rows,
@@ -130,11 +132,11 @@ export function CsvPreview({
     return <EmptyState />;
   }
 
-  const columns = React.useMemo<ColumnDef<Record<string, string | undefined>>[]>(() => {
-    const columnHelper = createColumnHelper<Record<string, string | undefined>>();
+  const columns = React.useMemo<ColumnDef<CsvRow, any>[]>(() => {
+    const columnHelper = createColumnHelper<CsvRow>();
 
     // Row index column
-    const cols: ColumnDef<Record<string, string | undefined>>[] = [
+    const cols: ColumnDef<CsvRow, any>[] = [
       columnHelper.display({
         id: 'rowIndex',
         header: () => <span className="text-xs font-normal text-muted-foreground">#</span>,
