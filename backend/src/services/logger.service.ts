@@ -9,21 +9,15 @@ const logLevel = process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug');
 
 /**
  * Create a configured Pino logger instance.
- * - Production: JSON output to stdout
- * - Development: Pretty-printed with colorized output
+ * - Production: Plain JSON output to stdout (no transport needed)
+ * - Development: Pretty-printed with colorized output via pino-pretty
+ *
+ * IMPORTANT: pino-pretty transport is ONLY configured in development.
+ * In production the transport option is omitted entirely so pino never
+ * tries to load pino-pretty (which is a devDependency).
  */
-export const logger = pino({
+const pinoOptions: pino.LoggerOptions = {
   level: logLevel,
-  transport: isProduction
-    ? undefined
-    : {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      },
   redact: {
     paths: ['req.headers.authorization', 'req.headers.cookie', 'body.apiKey', 'body.password'],
     censor: '[REDACTED]',
@@ -33,7 +27,20 @@ export const logger = pino({
     res: pino.stdSerializers.res,
     err: pino.stdSerializers.err,
   },
-});
+};
+
+if (!isProduction) {
+  pinoOptions.transport = {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'SYS:standard',
+      ignore: 'pid,hostname',
+    },
+  };
+}
+
+export const logger = pino(pinoOptions);
 
 /**
  * HTTP request logging middleware for Express.
