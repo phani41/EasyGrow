@@ -2,45 +2,46 @@ import pino from 'pino';
 import pinoHttp from 'pino-http';
 import { Request, Response } from 'express';
 
-// ===== Logger Configuration =====
+// ===== Logger Selection =====
+// Use a ternary so that only ONE pino() call is ever evaluated.
+// In production, the development branch (with pino-pretty transport) is NEVER executed.
+// In development, the production branch (plain JSON) is NEVER executed.
 
 const isProduction = process.env.NODE_ENV === 'production';
-const logLevel = process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug');
 
-/**
- * Create a configured Pino logger instance.
- * - Production: Plain JSON output to stdout (no transport needed)
- * - Development: Pretty-printed with colorized output via pino-pretty
- *
- * IMPORTANT: pino-pretty transport is ONLY configured in development.
- * In production the transport option is omitted entirely so pino never
- * tries to load pino-pretty (which is a devDependency).
- */
-const pinoOptions: pino.LoggerOptions = {
-  level: logLevel,
-  redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', 'body.apiKey', 'body.password'],
-    censor: '[REDACTED]',
-  },
-  serializers: {
-    req: pino.stdSerializers.req,
-    res: pino.stdSerializers.res,
-    err: pino.stdSerializers.err,
-  },
-};
-
-if (!isProduction) {
-  pinoOptions.transport = {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname',
-    },
-  };
-}
-
-export const logger = pino(pinoOptions);
+export const logger: pino.Logger = isProduction
+  ? pino({
+      level: process.env.LOG_LEVEL || 'info',
+      redact: {
+        paths: ['req.headers.authorization', 'req.headers.cookie', 'body.apiKey', 'body.password'],
+        censor: '[REDACTED]',
+      },
+      serializers: {
+        req: pino.stdSerializers.req,
+        res: pino.stdSerializers.res,
+        err: pino.stdSerializers.err,
+      },
+    })
+  : pino({
+      level: process.env.LOG_LEVEL || 'debug',
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:standard',
+          ignore: 'pid,hostname',
+        },
+      },
+      redact: {
+        paths: ['req.headers.authorization', 'req.headers.cookie', 'body.apiKey', 'body.password'],
+        censor: '[REDACTED]',
+      },
+      serializers: {
+        req: pino.stdSerializers.req,
+        res: pino.stdSerializers.res,
+        err: pino.stdSerializers.err,
+      },
+    });
 
 /**
  * HTTP request logging middleware for Express.

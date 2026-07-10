@@ -3,11 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
-
-# Install ALL dependencies (including devDependencies for build)
-RUN npm ci
+# Copy package files (lockfile may not exist — use npm install instead of ci)
+COPY package.json ./
+RUN npm install --no-audit --no-fund
 
 # Copy source code
 COPY tsconfig.json ./
@@ -16,8 +14,11 @@ COPY src/ ./src/
 # Build TypeScript
 RUN npm run build
 
-# Prune dev dependencies for production
+# Prune dev dependencies — safe because production code never references them
 RUN npm prune --production
+
+# Verify built output exists
+RUN test -d dist && ls dist/ && echo "Build verified successfully"
 
 # ===== Production Stage =====
 FROM node:20-alpine AS runner
@@ -32,7 +33,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p /app/uploads /app/logs && \
     chown expressjs:nodejs /app/uploads /app/logs
 
-# Copy built assets from builder
+# Copy built assets from builder (only what's needed at runtime)
 COPY --from=builder --chown=expressjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=expressjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=expressjs:nodejs /app/package.json ./package.json
