@@ -20,8 +20,11 @@ import {
 
 // ===== Dynamic Imports (code-split large components with @tanstack/react-table) =====
 
-const CsvPreview = dynamic(() => import('@/components/csv-preview'), {
-  loading: () => (
+const CsvPreview = dynamic(
+  () => import('@/components/csv-preview').then((m) => ({ default: m.CsvPreview })),
+  {
+    ssr: false,
+    loading: () => (
     <Card className="animate-fade-in">
       <CardContent className="pt-6">
         <div className="space-y-4">
@@ -47,8 +50,11 @@ const CsvPreview = dynamic(() => import('@/components/csv-preview'), {
   ),
 });
 
-const ImportResults = dynamic(() => import('@/components/import-results'), {
-  loading: () => (
+const ImportResults = dynamic(
+  () => import('@/components/import-results').then((m) => ({ default: m.ImportResults })),
+  {
+    ssr: false,
+    loading: () => (
     <Card className="animate-fade-in">
       <CardContent className="pt-6">
         <div className="flex items-center gap-3">
@@ -153,14 +159,6 @@ export default function Home() {
         throw new Error(response.error || 'Upload failed');
       }
     } catch (error: unknown) {
-      // Check if this is a cold-start retry error
-      if (error instanceof Error && error.name === 'ColdStartRetry') {
-        setIsColdStarting(true);
-        setColdStartMessage(error.message);
-        // Don't set error state — keep retrying
-        return;
-      }
-
       const message = getFriendlyErrorMessage(error, 'upload');
       setUploadError(message);
       setUploadState('error');

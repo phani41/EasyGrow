@@ -43,29 +43,16 @@ function getColdStartDelay(attempt: number): number {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as typeof error.config & { _retryCount?: number };
     // Avoid infinite retry loops
-    if (originalRequest._retryCount === undefined) {
-      originalRequest._retryCount = 0;
-    }
+    const retryCount = originalRequest._retryCount ?? 0;
+    originalRequest._retryCount = retryCount;
 
-    if (
-      isRetryableError(error) &&
-      originalRequest._retryCount < MAX_RETRIES
-    ) {
-      originalRequest._retryCount += 1;
+    if (isRetryableError(error) && retryCount < MAX_RETRIES) {
+      originalRequest._retryCount = retryCount + 1;
       const delay = getColdStartDelay(originalRequest._retryCount);
 
-      // Create a custom error that the UI can detect as a cold-start retry
-      const isFirstRetry = originalRequest._retryCount === 1;
-      const coldStartError = new Error(
-        isFirstRetry
-          ? 'Server is starting up...'
-          : `Server is starting up (retry ${originalRequest._retryCount}/${MAX_RETRIES})...`
-      );
-      coldStartError.name = 'ColdStartRetry';
-
-      return new Promise((resolve, reject) => {
+      return new Promise<typeof error>((resolve, reject) => {
         setTimeout(() => {
           apiClient(originalRequest)
             .then(resolve)
