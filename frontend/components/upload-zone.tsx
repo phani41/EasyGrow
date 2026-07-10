@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import {
   Upload,
   X,
@@ -50,7 +50,7 @@ export function UploadZone({
   );
 
   const onDrop = React.useCallback(
-    (acceptedFiles: File[], rejections: { file: File; errors: { message: string }[] }[]) => {
+    (acceptedFiles: File[], rejections: FileRejection[]) => {
       // Handle react-dropzone-level rejections (wrong mime type, too large)
       if (rejections.length > 0) {
         const rejection = rejections[0];

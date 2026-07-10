@@ -188,7 +188,8 @@ export function ImportResults({ records, summary }: ImportResultsProps) {
         size: 120,
         minSize: 80,
       }),
-      columnHelper.accessor('crm_status', {
+      columnHelper.accessor((row) => row.crm_status, {
+        id: 'crm_status',
         header: 'Status',
         cell: (info) => {
           const status = info.getValue() as CrmStatus;
