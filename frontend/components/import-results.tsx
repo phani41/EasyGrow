@@ -31,6 +31,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { CellDetailModal } from '@/components/cell-detail-modal';
+import { sanitizeCsvCell } from '@/lib/validation';
 import { CrmRecord, CrmStatus } from '@/types';
 
 // ===== Interfaces =====
@@ -269,17 +270,7 @@ export function ImportResults({ records, summary }: ImportResultsProps) {
     },
   });
 
-  /**
-   * Sanitize a cell value to prevent CSV injection.
-   * Cells starting with =, +, -, @ or tab are prefixed with a single quote
-   * to prevent formula execution in Excel/Google Sheets.
-   */
-  const sanitizeCsvCell = (value: string): string => {
-    if (/^[=+\-@\t]/.test(value)) {
-      return `"'${value.replace(/"/g, '""')}"`;
-    }
-    return `"${value.replace(/"/g, '""')}"`;
-  };
+
 
   const exportCsv = () => {
     setIsExporting(true);
@@ -349,7 +340,7 @@ export function ImportResults({ records, summary }: ImportResultsProps) {
                 placeholder="Search records..."
                 value={searchTerm}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setSearchTerm(e.target.value.replace(/[<>"']/g, '').trim());
                   table.setPageIndex(0);
                 }}
                 aria-label="Search records"

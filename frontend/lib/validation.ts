@@ -15,8 +15,9 @@ export interface BackendValidation {
   warningCount: number;
 }
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-export const MAX_FILE_SIZE_READABLE = '10 MB';
+// Must match backend's MAX_FILE_SIZE (50MB)
+export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+export const MAX_FILE_SIZE_READABLE = '50 MB';
 
 /**
  * Format bytes into a human-readable string.
@@ -28,6 +29,19 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
+ * Sanitize a filename to prevent path traversal and XSS.
+ * Removes path separators, null bytes, and non-printable characters.
+ */
+export function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[/\\]/g, '_')     // Replace path separators
+    .replace(/\0/g, '')          // Remove null bytes
+    .replace(/[^\x20-\x7E]/g, '') // Remove non-printable characters
+    .trim()
+    .slice(0, 255);              // Limit length
+}
+
+/**
  * Validate a File object before upload.
  * Checks: file exists, .csv extension, file size, empty file.
  */
@@ -36,8 +50,11 @@ export function validateFile(file: File): ValidationResult {
     return { valid: false, error: 'No file provided' };
   }
 
+  // Sanitize filename for validation messages
+  const safeName = sanitizeFileName(file.name);
+
   // Check extension
-  const ext = file.name.split('.').pop()?.toLowerCase();
+  const ext = safeName.split('.').pop()?.toLowerCase();
   if (!ext || ext !== 'csv') {
     return {
       valid: false,
@@ -68,6 +85,17 @@ export function validateFile(file: File): ValidationResult {
  */
 export function isValidCsvExtension(filename: string): boolean {
   return filename.toLowerCase().endsWith('.csv');
+}
+
+/**
+ * Sanitize a cell value to prevent CSV injection (formula injection).
+ * Cells starting with =, +, -, @ or tab get prefixed with a single quote.
+ */
+export function sanitizeCsvCell(value: string): string {
+  if (/^[=+\-@\t]/.test(value)) {
+    return `"'${value.replace(/"/g, '""')}"`;
+  }
+  return `"${value.replace(/"/g, '""')}"`;
 }
 
 /**

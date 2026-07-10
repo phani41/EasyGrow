@@ -24,8 +24,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Caught an error:', error, errorInfo);
+  componentDidCatch(_error: Error, _errorInfo: React.ErrorInfo) {
+    // In production, this is where you'd send the error to your monitoring service
+    // (e.g., Sentry, Datadog, etc.)
   }
 
   handleReset = () => {
@@ -49,7 +50,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               <p className="text-muted-foreground">
                 An unexpected error occurred. Please try refreshing the page.
               </p>
-              {this.state.error && (
+              {this.state.error && process.env.NODE_ENV !== 'production' && (
                 <details className="text-xs text-left mt-4 bg-muted/50 rounded-lg p-3">
                   <summary className="cursor-pointer text-muted-foreground font-medium">
                     Error details
@@ -60,7 +61,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 </details>
               )}
             </div>
-            <Button onClick={this.handleReset} className="gap-2">
+            <Button onClick={this.handleReset} className="gap-2" aria-label="Try again">
               <RefreshCw className="h-4 w-4" />
               Try again
             </Button>

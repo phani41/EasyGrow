@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Background -->
+  <rect width="100" height="100" rx="20" fill="#2563eb"/>
+  <!-- Upload arrow -->
+  <path d="M50 65V35M38 47l12-12 12 12" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Document lines -->
+  <path d="M30 72h40M30 80h28" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+</svg>

@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "echo 'No linter configured. Install eslint to enable linting.'",
+    "lint": "next lint 2>/dev/null || echo 'No ESLint configuration found — install with: npx eslint --init'",
     "test": "vitest run",
     "test:watch": "vitest"
   },

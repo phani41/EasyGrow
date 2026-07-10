@@ -1,0 +1,16 @@
+{
+  "name": "EasyGrow - AI-Powered CSV Importer",
+  "short_name": "EasyGrow",
+  "description": "Intelligently import CSV data into your CRM using AI-powered column mapping.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
