@@ -10,7 +10,7 @@ function GoodComponent() {
 
 // ===== Bad Component (throws on render) =====
 
-function BadComponent(): JSX.Element {
+function BadComponent() {
   throw new Error('Test error message');
 }
 
