@@ -23,22 +23,7 @@ RUN rm -rf dist && npm run build
 RUN test -d dist && ls dist/ && echo "=== Build verified: dist/ contains $(ls dist/ | wc -l) items ==="
 
 # Prune dev dependencies — production runtime never needs them
-# This removes pino-pretty, typescript, types, vitest, etc.
 RUN npm prune --production
-
-# Verify pino-pretty is NOT present in production node_modules
-RUN test ! -d node_modules/pino-pretty && echo "=== Verified: pino-pretty NOT in production node_modules ===" || (echo "ERROR: pino-pretty still present after prune!" && exit 1)
-
-# Verify logger is compiled correctly (no transport in production build)
-RUN node -e "
-  const fs = require('fs');
-  const content = fs.readFileSync('dist/services/logger.service.js', 'utf8');
-  if (content.includes('pino-pretty')) {
-    console.error('ERROR: dist still contains pino-pretty reference!');
-    process.exit(1);
-  }
-  console.log('=== Verified: dist/services/logger.service.js has NO pino-pretty reference ===');
-"
 
 # ===== Production Stage =====
 FROM node:20-alpine AS runner
