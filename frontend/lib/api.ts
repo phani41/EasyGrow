@@ -74,7 +74,7 @@ export async function uploadCsvFile(file: File): Promise<ApiResponse<UploadPrevi
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await apiClient.post<ApiResponse<UploadPreviewData>>('/upload', formData, {
+  const response = await apiClient.post<ApiResponse<UploadPreviewData>>('/api/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -91,7 +91,7 @@ export async function uploadCsvFile(file: File): Promise<ApiResponse<UploadPrevi
 export async function mapCsvToCrm(
   fileId: string
 ): Promise<ApiResponse<MapResponseData>> {
-  const response = await apiClient.post<ApiResponse<MapResponseData>>('/map', {
+  const response = await apiClient.post<ApiResponse<MapResponseData>>('/api/map', {
     fileId,
   });
 

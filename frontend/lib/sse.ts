@@ -30,7 +30,7 @@ export function connectMappingStream(
     onReconnecting?: (attempt: number, maxAttempts: number) => void;
   }
 ): () => void {
-  const url = `${API_BASE_URL}/map/stream?fileId=${encodeURIComponent(fileId)}`;
+  const url = `${API_BASE_URL}/api/map/stream?fileId=${encodeURIComponent(fileId)}`;
   let eventSource: EventSource | null = null;
   let isAborted = false;
   let reconnectAttempts = 0;
