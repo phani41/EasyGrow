@@ -27,11 +27,11 @@ function isRetryableError(error: unknown): boolean {
     axiosError.code === 'ECONNABORTED' ||
     axiosError.code === 'ERR_CONNECTION_REFUSED' ||
     axiosError.code === 'ERR_CONNECTION_RESET' ||
-    axiosError.message?.includes('timeout') ||
-    axiosError.message?.includes('connect') ||
-    axiosError.message?.includes('Network Error') ||
-    axiosError.message?.includes('socket hang up') ||
-    axiosError.message?.includes('connect ECONNREFUSED')
+    (axiosError.message?.includes('timeout') ?? false) ||
+    (axiosError.message?.includes('connect') ?? false) ||
+    (axiosError.message?.includes('Network Error') ?? false) ||
+    (axiosError.message?.includes('socket hang up') ?? false) ||
+    (axiosError.message?.includes('connect ECONNREFUSED') ?? false)
   );
 }
 
