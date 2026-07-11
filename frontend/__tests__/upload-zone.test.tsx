@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { UploadZone } from '@/components/upload-zone';
 
-// ===== Mock react-dropzone =====
-
 const { mockGetRootProps, mockGetInputProps, mockOpen } = vi.hoisted(() => ({
   mockGetRootProps: vi.fn(() => ({
     onClick: vi.fn(),
@@ -43,8 +41,6 @@ vi.mock('react-dropzone', () => ({
     open: mockOpen,
   })),
 }));
-
-// ===== UploadZone =====
 
 describe('UploadZone', () => {
   const defaultProps = {

@@ -7,8 +7,6 @@ import {
   MAX_FILE_SIZE_READABLE,
 } from '@/lib/validation';
 
-// ===== formatFileSize =====
-
 describe('formatFileSize', () => {
   it('should format bytes', () => {
     expect(formatFileSize(500)).toBe('500 B');
@@ -29,8 +27,6 @@ describe('formatFileSize', () => {
   });
 });
 
-// ===== isValidCsvExtension =====
-
 describe('isValidCsvExtension', () => {
   it('should return true for .csv files', () => {
     expect(isValidCsvExtension('data.csv')).toBe(true);
@@ -48,13 +44,7 @@ describe('isValidCsvExtension', () => {
   });
 });
 
-// ===== validateFile =====
-
 describe('validateFile', () => {
-  /**
-   * Create a mock File with the given name and content of the specified size.
-   * Uses repeated characters to reach the desired byte length.
-   */
   function createMockFile(name: string, size: number): File {
     const content = 'x'.repeat(Math.max(0, size));
     return new File([content], name, { type: 'text/csv' });
@@ -85,7 +75,6 @@ describe('validateFile', () => {
     const file = createMockFile('datafile', 1000);
     const result = validateFile(file);
     expect(result.valid).toBe(false);
-    // File named 'datafile' has no '.' so ext is the full filename 'datafile'
     expect(result.error).toContain('DATAFILE');
     expect(result.error).toContain('CSV');
   });

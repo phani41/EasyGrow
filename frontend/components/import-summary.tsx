@@ -40,7 +40,6 @@ function AnimatedCounter({
     function animate(currentTime: number) {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(startValue + (endValue - startValue) * eased);
       setDisplayValue(current);
@@ -77,7 +76,6 @@ export function ImportSummaryCard({ summary }: ImportSummaryCardProps) {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Main Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -157,7 +155,6 @@ export function ImportSummaryCard({ summary }: ImportSummaryCardProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Contact Rate */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -190,7 +187,6 @@ export function ImportSummaryCard({ summary }: ImportSummaryCardProps) {
             </p>
           </div>
 
-          {/* Email vs Phone Breakdown */}
           <div className="flex items-center gap-6 pt-1">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500" />
@@ -212,7 +208,6 @@ export function ImportSummaryCard({ summary }: ImportSummaryCardProps) {
             </div>
           </div>
 
-          {/* Data Quality Score */}
           {totalContacts > 0 && (
             <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
               <div

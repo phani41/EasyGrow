@@ -3,9 +3,9 @@ import { CsvService } from '../services/csv.service';
 import { OpenRouterService } from '../services/openrouter.service';
 import { MappingService } from '../services/mapping.service';
 import { csvCache } from '../services/cache.service';
+import { logger } from '../services/logger.service';
 import { AppError, ApiResponse, CrmRecord, ImportSummary, BatchProgressEvent } from '../types';
 
-// Lazy initialization
 let _csvService: CsvService | null = null;
 let _openrouterService: OpenRouterService | null = null;
 let _mappingService: MappingService | null = null;
@@ -25,10 +25,6 @@ function getMappingService(): MappingService {
   return _mappingService;
 }
 
-/**
- * POST /api/upload
- * Upload a CSV file, parse it, validate content, cache full data server-side, return preview.
- */
 export const uploadCsv = async (
   req: Request,
   res: Response<ApiResponse>,
@@ -42,10 +38,8 @@ export const uploadCsv = async (
     const filePath = req.file.path;
     const fileName = req.file.originalname;
 
-    // Parse + validate the full CSV
     const { data: parsed, validation } = await getCsvService().parseFile(filePath, fileName);
 
-    // If validation has hard errors, return them
     if (!validation.valid) {
       getCsvService().cleanupFile(filePath);
       res.status(422).json({
@@ -56,7 +50,6 @@ export const uploadCsv = async (
       return;
     }
 
-    // Cache the full data server-side
     csvCache.set(parsed.fileId, {
       headers: parsed.headers,
       rows: parsed.rows,
@@ -64,10 +57,8 @@ export const uploadCsv = async (
       totalRows: parsed.totalRows,
     });
 
-    // Clean up the uploaded file
     getCsvService().cleanupFile(filePath);
 
-    // Return preview data (first 10 rows) + fileId + validation warnings
     res.status(200).json({
       success: true,
       data: {
@@ -87,14 +78,6 @@ export const uploadCsv = async (
   }
 };
 
-/**
- * POST /api/map
- * Process cached CSV rows through the new AI engine:
- * 1. Classify dataset → reject incompatible
- * 2. Get column mapping (rules or AI, cached)
- * 3. Validate required CRM fields exist
- * 4. Apply mapping locally to ALL rows — NO per-batch AI calls
- */
 export const mapCsvToCrm = async (
   req: Request,
   res: Response<ApiResponse>,
@@ -107,7 +90,6 @@ export const mapCsvToCrm = async (
       throw new AppError('Missing required field: fileId', 400);
     }
 
-    // Retrieve cached CSV data
     const cachedData = csvCache.get(fileId);
     if (!cachedData) {
       throw new AppError('CSV data not found or expired. Please re-upload the file.', 404);
@@ -122,7 +104,6 @@ export const mapCsvToCrm = async (
     const mappingService = getMappingService();
     const dataSource = mappingService.detectDataSourceFromFile(fileName) || '';
 
-    // Step 1: Classify dataset
     const classification = mappingService.classifyDataset(headers, rows);
     const compatibility = mappingService.isDatasetCompatible(classification);
 
@@ -139,10 +120,8 @@ export const mapCsvToCrm = async (
       return;
     }
 
-    // Step 2: Get column mapping (rules or AI, cached)
     const mappingResult = await mappingService.getMapping(headers, rows);
 
-    // Step 3: Validate required fields exist
     const requiredFields = mappingService.hasRequiredFields(mappingResult.mapping);
     if (!requiredFields.valid) {
       csvCache.delete(fileId);
@@ -162,8 +141,7 @@ export const mapCsvToCrm = async (
       return;
     }
 
-    // Step 4: Apply mapping locally to ALL rows
-    const LOCAL_BATCH_SIZE = 1000; // For memory efficiency, not AI
+    const LOCAL_BATCH_SIZE = 1000;
     const totalBatches = getCsvService().getTotalBatches(rows.length, LOCAL_BATCH_SIZE);
     const { records, summary } = mappingService.applyMapping(
       rows,
@@ -195,8 +173,6 @@ export const mapCsvToCrm = async (
   }
 };
 
-// ===== Helper: Send SSE Event =====
-
 function sendSSEEvent(res: Response, eventName: string, data: Record<string, unknown>): void {
   res.write(`event: ${eventName}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -219,7 +195,6 @@ export const mapCsvToCrmStream = async (
     return;
   }
 
-  // Retrieve cached CSV data
   const cachedData = csvCache.get(fileId);
   if (!cachedData) {
     res.status(404).json({
@@ -236,7 +211,6 @@ export const mapCsvToCrmStream = async (
     return;
   }
 
-  // Set SSE headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -256,7 +230,6 @@ export const mapCsvToCrmStream = async (
     phonesExtracted: 0,
   };
 
-  // SSE helpers
   let aborted = false;
   let bytesWritten = 0;
   let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -277,7 +250,7 @@ export const mapCsvToCrmStream = async (
   req.on('close', () => {
     if (aborted) return;
     cleanupConnection();
-    console.log(`[SSE] Client disconnected for fileId: ${fileId} (after ${bytesWritten} bytes sent)`);
+    logger.info({ fileId, bytesWritten }, 'SSE client disconnected');
   });
 
   const originalWrite = res.write.bind(res);
@@ -298,7 +271,7 @@ export const mapCsvToCrmStream = async (
   connectionTimeout = setTimeout(() => {
     if (!aborted) {
       cleanupConnection();
-      console.log(`[SSE] Connection timeout for fileId: ${fileId}`);
+      logger.warn({ fileId }, 'SSE connection timed out');
       sendSSEEvent(res, 'error', {
         type: 'error',
         error: 'Processing timed out after 30 minutes.',

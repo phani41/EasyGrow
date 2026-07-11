@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CellDetailModal } from '@/components/cell-detail-modal';
 
-// ===== CellDetailModal =====
-
 describe('CellDetailModal', () => {
   const defaultProps = {
     value: 'Test cell content that is long enough to be useful',
@@ -54,7 +52,6 @@ describe('CellDetailModal', () => {
   it('should NOT call onClose when modal content is clicked', () => {
     render(<CellDetailModal {...defaultProps} />);
 
-    // The content area is inside the dialog div that stops propagation
     const content = screen.getByText('Test cell content that is long enough to be useful');
     fireEvent.click(content.closest('pre')!);
 
@@ -71,8 +68,6 @@ describe('CellDetailModal', () => {
     render(<CellDetailModal {...defaultProps} label="Record #" />);
 
     expect(screen.getByText('Record # 5 · Email')).toBeInTheDocument();
-    // When using Record # label, the column name should also appear as a bold title
-    // (two elements contain "Email": the subtitle and the bold title)
     const emailElements = screen.getAllByText(/Email/);
     expect(emailElements.length).toBe(2);
   });
@@ -80,10 +75,7 @@ describe('CellDetailModal', () => {
   it('should not show column name as title for Row label', () => {
     render(<CellDetailModal {...defaultProps} label="Row" />);
 
-    // "Row" is the default label, so the column name should NOT appear as a separate heading
     const emailInstances = screen.getAllByText(/Email/);
-    // Email should ONLY appear in the subtitle line, not as a separate heading
-    // The subtitle has "Row 5 · Email" so there's one instance
     expect(emailInstances.length).toBe(1);
   });
 
@@ -101,7 +93,6 @@ describe('CellDetailModal', () => {
   });
 
   it('should show copied state after clicking copy', async () => {
-    // Mock clipboard API
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: { writeText },
@@ -112,7 +103,6 @@ describe('CellDetailModal', () => {
     const copyButton = screen.getByRole('button', { name: /copy to clipboard/i });
     fireEvent.click(copyButton);
 
-    // Wait for the async operation
     await vi.waitFor(() => {
       expect(screen.getByRole('button', { name: /copied/i })).toBeInTheDocument();
     });

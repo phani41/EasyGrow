@@ -1,6 +1,7 @@
 import { CsvRow, CrmRecord, ImportSummary, ColumnMapping, DatasetType, DatasetClassification, MappingResult, DataSource, ALLOWED_DATA_SOURCES } from '../types';
 import { isValidEmail } from '../utils/helpers';
 import { OpenRouterService } from './openrouter.service';
+import { logger } from './logger.service';
 
 interface MappingCacheEntry {
   mapping: ColumnMapping;
@@ -20,12 +21,6 @@ interface FieldRule {
   field: string;
 }
 
-/**
- * Rule-based field detection patterns.
- * Each CRM field has a set of regex patterns to match against CSV headers.
- * Order matters: more specific patterns should come first.
- * Extended with many common real-world CSV export patterns.
- */
 const FIELD_RULES: FieldRule[] = [
   // Email
   {
@@ -440,22 +435,16 @@ function transformRow(
     return vals.join(', ');
   };
 
-  // --- Extract and normalize fields ---
-
-  // Email
   const rawEmail = getPrimary('email').toLowerCase().trim();
   const email = isValidEmail(rawEmail) ? rawEmail : '';
 
-  // Name (combine if multiple sources)
   const nameParts = fieldValues.get('name') || [];
   let name = nameParts.join(' ').trim();
   name = name.replace(/\s+/g, ' ');
 
-  // Phone
   const rawPhone = getPrimary('mobile_without_country_code');
   const phoneDigits = cleanPhone(rawPhone);
 
-  // Country code
   let countryCode = getPrimary('country_code');
   let phoneDigitsFinal = phoneDigits;
 
@@ -465,50 +454,38 @@ function transformRow(
     phoneDigitsFinal = extracted.phoneDigits;
   }
 
-  // Check if we have at least email or phone
   const hasContact = email !== '' || phoneDigitsFinal !== '';
 
   if (!hasContact) {
     return null;
   }
 
-  // Company
   const company = getPrimary('company');
 
-  // City / State / Country
   const city = getPrimary('city');
   const state = getPrimary('state');
   const country = getPrimary('country');
 
-  // Lead owner
   const leadOwner = getPrimary('lead_owner');
 
-  // CRM Status
   const rawStatus = getPrimary('crm_status');
   const crmStatus = normalizeCrmStatus(rawStatus);
 
-  // Created At
   const rawDate = getPrimary('created_at');
   const createdAt = normalizeDate(rawDate);
 
-  // Description
   const description = getPrimary('description');
 
-  // Possession Time
   const possessionTime = getPrimary('possession_time');
 
-  // CRM Note — collect extra values from multiple-mapped fields
   const noteParts: string[] = [];
 
-  // Extra emails (beyond the first)
   const extraEmails = getExtra('email', 'email');
   if (extraEmails) noteParts.push(`Extra email: ${extraEmails}`);
 
-  // Extra phones (beyond the first)
   const extraPhones = getExtra('mobile_without_country_code', 'mobile_without_country_code');
   if (extraPhones) noteParts.push(`Extra phone: ${extraPhones}`);
 
-  // Extra data from crm_note-mapped headers
   const noteValues = fieldValues.get('crm_note');
   if (noteValues && noteValues.length > 0) {
     noteParts.push(noteValues.join(', '));
@@ -566,10 +543,9 @@ export class MappingService {
   ): Promise<MappingResult> {
     const cacheKey = getCacheKey(headers);
 
-    // 1. Check cache
     const cached = this.mappingCache.get(cacheKey);
     if (cached && Date.now() - cached.createdAt < CACHE_TTL_MS) {
-      console.log(`[MappingService] Cache hit for headers (${headers.length} columns)`);
+      logger.info({ columns: headers.length }, 'Mapping cache hit');
       return {
         mapping: cached.mapping,
         confidence: cached.confidence,
@@ -580,14 +556,10 @@ export class MappingService {
       };
     }
 
-    // 2. Run rule-based detection first
     const { mapping: ruleMapping, coverage, skippedFields } = detectFieldsByRules(headers);
 
-    // 3. Check if rules cover enough
     if (coverage >= RULE_COVERAGE_THRESHOLD) {
-      console.log(
-        `[MappingService] Rule-based detection covered ${(coverage * 100).toFixed(0)}% of fields — skipping AI`
-      );
+      logger.info({ coverage: Math.round(coverage * 100) }, 'Rule-based mapping skipped AI');
 
       const classification = classifyDataset(headers, rows.slice(0, 5));
       const confidence = Math.round(coverage * 100);
@@ -612,15 +584,11 @@ export class MappingService {
       return result;
     }
 
-    // 4. Call AI for mapping
-    console.log(
-      `[MappingService] Rule-based detection covered ${(coverage * 100).toFixed(0)}% — calling AI for mapping`
-    );
+    logger.info({ coverage: Math.round(coverage * 100) }, 'Calling AI for column mapping');
 
     const sampleRows = rows.slice(0, 5);
     const aiResult = await this.openrouterService.getColumnMapping(headers, sampleRows);
 
-    // Merge AI mapping with rule-based detection
     const mergedMapping: ColumnMapping = { ...aiResult.mapping };
     for (const header of headers) {
       if (!(header in mergedMapping) || mergedMapping[header] === '') {

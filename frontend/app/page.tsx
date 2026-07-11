@@ -82,7 +82,6 @@ function getFriendlyErrorMessage(error: unknown, context: 'upload' | 'ai-process
   const serverMessage = axiosError?.response?.data?.error;
   const errorCode = axiosError?.code;
 
-  // Network-level errors
   if (errorCode === 'ECONNABORTED') {
     return context === 'upload'
       ? 'Upload timed out. The file may be too large or the server is busy. Please try again.'
@@ -93,7 +92,6 @@ function getFriendlyErrorMessage(error: unknown, context: 'upload' | 'ai-process
     return 'Unable to connect to the server. Please check your internet connection and try again.';
   }
 
-  // HTTP status code errors
   if (statusCode === 413) {
     return 'File is too large. Maximum allowed size is 50 MB.';
   }
@@ -118,7 +116,6 @@ function getFriendlyErrorMessage(error: unknown, context: 'upload' | 'ai-process
     return 'The server is temporarily unavailable. Please try again in a few minutes.';
   }
 
-  // Fallback to server message or generic error
   return serverMessage || axiosError?.message ||
     (context === 'upload'
       ? 'Failed to upload file. Please try again.'
@@ -171,7 +168,6 @@ export default function Home() {
     setProcessingProgress(0);
     setUploadError(null);
 
-    // Connect to SSE stream for real-time batch processing
     setIsColdStarting(false);
     setColdStartMessage('');
 
@@ -200,11 +196,9 @@ export default function Home() {
       },
     });
 
-    // Store cleanup for potential abort
     sseCleanupRef.current = cleanup;
   };
 
-  // Clean up SSE connection on unmount
   React.useEffect(() => {
     return () => {
       if (sseCleanupRef.current) {
@@ -214,7 +208,6 @@ export default function Home() {
   }, []);
 
   const handleReset = () => {
-    // Abort any in-flight SSE connection
     if (sseCleanupRef.current) {
       sseCleanupRef.current();
       sseCleanupRef.current = null;
@@ -233,7 +226,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">

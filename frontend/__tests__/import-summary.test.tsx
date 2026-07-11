@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { ImportSummaryCard } from '@/components/import-summary';
 import type { ImportSummary } from '@/types';
 
-// Mock requestAnimationFrame for AnimatedCounter — complete animation in one frame
 beforeEach(() => {
   vi.spyOn(performance, 'now').mockReturnValue(0);
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -12,8 +11,6 @@ beforeEach(() => {
   });
   vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
 });
-
-// ===== Helpers =====
 
 function createSummary(overrides: Partial<ImportSummary> = {}): ImportSummary {
   return {
@@ -25,8 +22,6 @@ function createSummary(overrides: Partial<ImportSummary> = {}): ImportSummary {
     ...overrides,
   };
 }
-
-// ===== ImportSummaryCard =====
 
 describe('ImportSummaryCard', () => {
   it('should render all stat cards', () => {
@@ -48,7 +43,6 @@ describe('ImportSummaryCard', () => {
 
     render(<ImportSummaryCard summary={summary} />);
 
-    // The animated counters should eventually display the values
     expect(screen.getByText('1,500')).toBeInTheDocument();
     expect(screen.getByText('1,200')).toBeInTheDocument();
     expect(screen.getByText('800')).toBeInTheDocument();
@@ -63,7 +57,6 @@ describe('ImportSummaryCard', () => {
   });
 
   it('should calculate correct contact capture rate', () => {
-    // 100 processed out of 110 total contacts = ~91%
     render(<ImportSummaryCard summary={createSummary({
       totalProcessed: 100,
       skippedNoContact: 10,

@@ -51,7 +51,6 @@ export function UploadZone({
 
   const onDrop = React.useCallback(
     (acceptedFiles: File[], rejections: FileRejection[]) => {
-      // Handle react-dropzone-level rejections (wrong mime type, too large)
       if (rejections.length > 0) {
         const rejection = rejections[0];
         if (rejection.errors[0]?.message?.includes('type')) {
@@ -94,10 +93,9 @@ export function UploadZone({
     maxFiles: 1,
     maxSize: MAX_FILE_SIZE,
     disabled: isUploading,
-    noClick: !!selectedFile, // Don't open file dialog when a file is already selected
+    noClick: !!selectedFile,
   });
 
-  // Determine which error to show
   const displayError = error || clientValidationError;
   const hasError = !!displayError;
   const dropzoneDisabled = isUploading;
@@ -115,11 +113,9 @@ export function UploadZone({
           'relative flex flex-col items-center justify-center w-full min-h-[300px] rounded-2xl border-2 border-dashed transition-all duration-300',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
 
-          // Active drag states
           isDragActive && !isDragReject && 'border-primary bg-primary/5 scale-[1.01] shadow-lg shadow-primary/10',
           isDragReject && 'border-destructive bg-destructive/5 scale-[1.01]',
 
-          // Normal states
           !isDragActive &&
             !hasError &&
             !selectedFile &&
@@ -128,21 +124,16 @@ export function UploadZone({
             !hasError &&
             'border-primary/30 bg-primary/[0.02]',
 
-          // Error state
           hasError && 'border-destructive/40 bg-destructive/5',
 
-          // Disabled
           dropzoneDisabled && 'pointer-events-none opacity-60',
 
-          // Cursor
           !dropzoneDisabled && !selectedFile && 'cursor-pointer',
           !dropzoneDisabled && selectedFile && 'cursor-default'
         )}
       >
-        {/* Hidden file input */}
         <input {...getInputProps()} />
 
-        {/* Drag-reject overlay message */}
         {isDragReject && (
           <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-destructive/10 backdrop-blur-[2px]">
             <div className="flex flex-col items-center gap-2 text-destructive">
@@ -155,7 +146,6 @@ export function UploadZone({
         <div className="flex flex-col items-center gap-5 p-8 text-center z-10">
           {selectedFile ? (
             <>
-              {/* Selected file state */}
               <div className="rounded-full bg-primary/10 p-4 ring-1 ring-primary/20">
                 <FileSpreadsheet className="h-10 w-10 text-primary" />
               </div>
@@ -191,7 +181,6 @@ export function UploadZone({
             </>
           ) : (
             <>
-              {/* Idle state / Drag-over state */}
               <div
                 className={cn(
                   'rounded-full p-5 transition-all duration-300',
@@ -237,7 +226,6 @@ export function UploadZone({
           )}
         </div>
 
-        {/* Upload Progress Overlay */}
         {isUploading && (
           <div className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-background/80 backdrop-blur-sm animate-fade-in">
             <div className="flex flex-col items-center gap-3">
@@ -256,7 +244,6 @@ export function UploadZone({
         )}
       </div>
 
-      {/* Error Message */}
       {displayError && (
         <div
           id="upload-error"

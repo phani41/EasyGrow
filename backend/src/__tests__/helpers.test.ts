@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TimeoutError, withTimeout, isTimeoutError, sleep } from '../utils/helpers';
 
-// ===== TimeoutError =====
-
 describe('TimeoutError', () => {
   it('should be an instance of Error', () => {
     const error = new TimeoutError('Timed out');
@@ -25,8 +23,6 @@ describe('TimeoutError', () => {
     expect(error.message).toBe('');
   });
 });
-
-// ===== withTimeout =====
 
 describe('withTimeout', () => {
   afterEach(() => {
@@ -123,8 +119,6 @@ describe('withTimeout', () => {
     expect(result).toBe('delayed');
   });
 });
-
-// ===== isTimeoutError =====
 
 describe('isTimeoutError', () => {
   it('should return true for a TimeoutError', () => {

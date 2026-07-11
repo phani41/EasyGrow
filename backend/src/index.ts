@@ -2,13 +2,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 process.on('unhandledRejection', (reason: unknown) => {
-  console.error('[FATAL] Unhandled Promise rejection:', reason);
+  logger.error({ reason }, 'Unhandled Promise rejection');
   process.exit(1);
 });
-
-console.log('[Startup] NODE_ENV:', process.env.NODE_ENV || 'not set');
-console.log('[Startup] Node.js:', process.version);
-console.log('[Startup] PID:', process.pid);
 
 import fs from 'fs';
 import express from 'express';

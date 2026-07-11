@@ -57,8 +57,6 @@ export interface ParsedCsvResponse {
   fileName: string;
 }
 
-// ===== Upload Types =====
-
 export interface ImportSummary {
   totalProcessed: number;
   skippedNoContact: number;
@@ -99,7 +97,7 @@ export type DatasetType =
   | 'Unknown';
 
 export interface ColumnMapping {
-  [csvHeader: string]: string; // Maps CSV header → CRM field name (or '' to skip)
+  [csvHeader: string]: string;
 }
 
 export interface DatasetClassification {
@@ -113,7 +111,7 @@ export interface MappingResult {
   confidence: number;
   datasetType: DatasetType;
   usedRuleBased: boolean;
-  skippedFields: string[]; // CSV headers that didn't map to any CRM field
+  skippedFields: string[];
   cacheHit: boolean;
 }
 

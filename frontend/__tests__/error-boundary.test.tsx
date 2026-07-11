@@ -2,23 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorBoundary } from '@/components/error-boundary';
 
-// ===== Good Component (no errors) =====
-
 function GoodComponent() {
   return <div data-testid="good">Everything is fine</div>;
 }
-
-// ===== Bad Component (throws on render) =====
 
 function BadComponent(): never {
   throw new Error('Test error message');
 }
 
-// ===== ErrorBoundary =====
-
 describe('ErrorBoundary', () => {
   beforeEach(() => {
-    // Suppress console.error from React error logging during tests
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -73,17 +66,14 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    // Should show error UI
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-    // Swap to GoodComponent first (state is still hasError:true, shows error UI)
     rerender(
       <ErrorBoundary>
         <GoodComponent />
       </ErrorBoundary>
     );
 
-    // Now click Try again to reset — GoodComponent won't throw
     fireEvent.click(screen.getByRole('button', { name: /Try again/i }));
 
     expect(screen.getByTestId('good')).toBeInTheDocument();

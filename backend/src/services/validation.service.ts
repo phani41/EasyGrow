@@ -13,21 +13,16 @@ export class ValidationService {
     const errors: ValidationError[] = [];
     const warnings: ValidationError[] = [];
 
-    // --- Header Validation ---
     this.validateHeaders(headers, errors);
 
-    // --- Row Count Validation ---
     this.validateRowCount(rows, errors);
 
-    // If no rows, no need for deeper validation
     if (rows.length === 0) {
       return this.buildResult(errors, warnings);
     }
 
-    // --- Column Count Consistency ---
     this.validateColumnConsistency(headers, rows, errors, warnings);
 
-    // --- Data Quality Checks ---
     this.validateDataQuality(rows, headers, warnings);
 
     return this.buildResult(errors, warnings);

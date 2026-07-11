@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
-// ===== Mock next-themes =====
-
 const { mockSetTheme } = vi.hoisted(() => ({
   mockSetTheme: vi.fn(),
 }));
@@ -15,8 +13,6 @@ vi.mock('next-themes', () => ({
     setTheme: mockSetTheme,
   }),
 }));
-
-// ===== ThemeToggle =====
 
 describe('ThemeToggle', () => {
   beforeEach(() => {
@@ -33,7 +29,6 @@ describe('ThemeToggle', () => {
   it('should show the sun icon in dark mode (to switch to light)', () => {
     mockTheme = 'dark';
     render(<ThemeToggle />);
-    // In dark mode, the sun icon (switch to light) should be visible
     const button = screen.getByRole('button', { name: /toggle theme/i });
     expect(button).toBeInTheDocument();
   });

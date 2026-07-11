@@ -1,13 +1,12 @@
 {
   "name": "easygrow-backend",
   "version": "1.0.0",
-  "description": "AI-powered CSV Importer Backend",
+  "description": "CSV Importer Backend",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "echo 'No linter configured. Install eslint to enable linting.'",
     "test": "vitest run",
     "test:watch": "vitest"
   },

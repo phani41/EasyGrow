@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OpenRouterService, OpenRouterApiError } from '../services/openrouter.service';
+import { logger } from '../services/logger.service';
 import { CsvRow } from '../types';
-
-// ===== Mocks =====
 
 const { mockCreate } = vi.hoisted(() => ({
   mockCreate: vi.fn(),
@@ -21,8 +20,6 @@ vi.mock('openai', () => {
     default: MockOpenAI,
   };
 });
-
-// ===== Helpers =====
 
 const SAMPLE_HEADERS = ['Full Name', 'Email', 'Phone', 'Company'];
 const SAMPLE_ROWS: CsvRow[] = [
@@ -67,8 +64,6 @@ function setupEnv(mockMode: boolean = false) {
   process.env.OPENROUTER_REFERER = 'http://localhost:3000';
   process.env.OPENROUTER_APP_NAME = 'EasyGrow';
 }
-
-// ===== Tests =====
 
 describe('OpenRouterService - Mock Mode', () => {
   beforeEach(() => {
@@ -294,7 +289,7 @@ describe('OpenRouterService - Constructor', () => {
   });
 
   it('should warn when no API key and not in mock mode (but not throw)', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined as any);
     delete process.env.OPENROUTER_API_KEY;
     process.env.OPENROUTER_MOCK_MODE = 'false';
 
@@ -323,7 +318,7 @@ describe('OpenRouterService - Constructor', () => {
   });
 
   it('should warn on unusual API key format', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined as any);
     process.env.OPENROUTER_API_KEY = 'weird-key';
     process.env.OPENROUTER_MOCK_MODE = 'false';
 
@@ -336,7 +331,7 @@ describe('OpenRouterService - Constructor', () => {
   });
 
   it('should accept valid sk-or-v1- key format', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined as any);
     process.env.OPENROUTER_API_KEY = 'sk-or-v1-test-key';
     process.env.OPENROUTER_MOCK_MODE = 'false';
 

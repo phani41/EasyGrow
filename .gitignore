@@ -31,15 +31,11 @@ Thumbs.db
 *.log
 npm-debug.log*
 logs/*.log
-!logs/.gitkeep
 backend/logs/*.log
-!backend/logs/.gitkeep
 
 # Uploaded files
 uploads/*
-!uploads/.gitkeep
 backend/uploads/*
-!backend/uploads/.gitkeep
 
 # TypeScript
 *.tsbuildinfo

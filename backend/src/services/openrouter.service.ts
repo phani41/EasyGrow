@@ -2,8 +2,7 @@ import OpenAI from 'openai';
 import { CsvRow, ColumnMapping, DatasetType } from '../types';
 import { buildColumnMappingPrompt } from '../prompts/crm.prompt';
 import { sleep, withTimeout, isTimeoutError } from '../utils/helpers';
-
-// ===== Constants =====
+import { logger } from './logger.service';
 
 const DEFAULT_MODEL = 'openrouter/auto';
 const MAX_RETRIES = 3;
@@ -11,8 +10,6 @@ const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 30000;
 const OPENROUTER_TIMEOUT_MS = 60_000; // 1 minute for mapping (small prompt)
 const TOKENS_PER_CHAR_ESTIMATE = 0.25;
-
-// ===== Response Types =====
 
 export interface OpenRouterMappingResult {
   mapping: ColumnMapping;
@@ -33,8 +30,6 @@ interface AiMappingResponse {
   confidence: number;
 }
 
-// ===== Error Types =====
-
 export class OpenRouterApiError extends Error {
   public readonly code: string;
   public readonly retryable: boolean;
@@ -46,8 +41,6 @@ export class OpenRouterApiError extends Error {
     this.retryable = retryable;
   }
 }
-
-// ===== Service =====
 
 export class OpenRouterService {
   private client: OpenAI | null;
@@ -71,19 +64,12 @@ export class OpenRouterService {
 
     if (!this.apiKey) {
       this.client = null;
-      console.warn(
-        '[OpenRouterService] OPENROUTER_API_KEY not set — will fail on first API call. ' +
-        'Set OPENROUTER_MOCK_MODE=true to run without an API key.'
-      );
+      logger.warn('OPENROUTER_API_KEY not set. Set OPENROUTER_MOCK_MODE=true to run without an API key.');
       return;
     }
 
     if (!this.apiKey.startsWith('sk-or-v1-')) {
-      console.warn(
-        '[OpenRouterService] OPENROUTER_API_KEY format looks unusual. ' +
-        'OpenRouter API keys typically start with "sk-or-v1-". ' +
-        'Get a key at https://openrouter.ai/keys'
-      );
+      logger.warn('OPENROUTER_API_KEY format looks unusual. OpenRouter API keys typically start with "sk-or-v1-".');
     }
 
     this.client = new OpenAI({
@@ -95,12 +81,9 @@ export class OpenRouterService {
       },
     });
 
-    console.log(`[OpenRouterService] Initialized with model: ${this.modelName}`);
+    logger.info({ model: this.modelName }, 'OpenRouter service initialized');
   }
 
-  /**
-   * Returns the current configuration for debug logging.
-   */
   getConfig(): { apiKeyLoaded: boolean; apiKeyPreview: string; model: string; mockMode: boolean; referer: string; appName: string } {
     return {
       apiKeyLoaded: !!this.apiKey,
@@ -112,9 +95,6 @@ export class OpenRouterService {
     };
   }
 
-  /**
-   * Ensure the OpenAI client is initialized before making API calls.
-   */
   private ensureClient(): OpenAI {
     if (this.client) {
       return this.client;
@@ -156,20 +136,15 @@ export class OpenRouterService {
     return Math.ceil(text.length * TOKENS_PER_CHAR_ESTIMATE);
   }
 
-  /**
-   * Try to repair malformed JSON from AI responses.
-   */
   private tryJsonRepair(text: string): string | null {
     try {
       JSON.parse(text);
       return text;
     } catch {
-      // Continue to repair attempts
     }
 
     let cleaned = text.trim();
 
-    // Try 2: Strip markdown code fences
     const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (codeBlockMatch) {
       try {
@@ -180,7 +155,6 @@ export class OpenRouterService {
       }
     }
 
-    // Try 3: Extract the first JSON object
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
@@ -191,7 +165,6 @@ export class OpenRouterService {
       }
     }
 
-    // Try 4: Fix common issues
     let fixed = cleaned
       .replace(/,\s*([}\]])/g, '$1')
       .replace(/(?<!\\)'/g, '"')
@@ -207,10 +180,6 @@ export class OpenRouterService {
     return null;
   }
 
-  /**
-   * Get column mapping from AI by sending headers + up to 5 sample rows.
-   * This is a SINGLE AI call — never repeated per batch.
-   */
   async getColumnMapping(
     headers: string[],
     sampleRows: CsvRow[],
@@ -227,9 +196,7 @@ export class OpenRouterService {
         const result = await this.callOpenRouterApi(headers, sampleRows, attempt);
 
         const elapsed = Date.now() - startTime;
-        console.log(
-          `[OpenRouterService] Column mapping completed in ${(elapsed / 1000).toFixed(1)}s (attempts: ${attempt})`
-        );
+        logger.info({ elapsedMs: elapsed, attempts: attempt }, 'Column mapping completed');
 
         return result;
       } catch (error) {
@@ -255,10 +222,7 @@ export class OpenRouterService {
             MAX_RETRY_DELAY_MS
           );
 
-          console.warn(
-            `[OpenRouterService] Column mapping attempt ${attempt} failed. ` +
-            `Retrying in ${delay}ms... Error: ${lastError.message}`
-          );
+          logger.warn({ attempt, delay, error: lastError.message }, 'Column mapping retry scheduled');
           await sleep(delay);
         }
       }
@@ -271,9 +235,6 @@ export class OpenRouterService {
     );
   }
 
-  /**
-   * Determine if an error is retryable.
-   */
   private isRetryableError(error: unknown): boolean {
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     const isTimeout = isTimeoutError(error);
@@ -304,10 +265,6 @@ export class OpenRouterService {
     );
   }
 
-  /**
-   * Convert API HTTP status codes to friendly, user-facing error messages.
-   * Called when the first real API request returns a non-retryable error.
-   */
   private toFriendlyApiError(error: unknown): OpenRouterApiError | null {
     const statusCode = this.extractStatusCode(error);
     const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -357,10 +314,6 @@ export class OpenRouterService {
     return null; // No specific friendly message — use default handling
   }
 
-  /**
-   * Core OpenRouter API call for column mapping.
-   * Sends ONLY headers + up to 5 sample rows — never the full dataset.
-   */
   private async callOpenRouterApi(
     headers: string[],
     sampleRows: CsvRow[],
@@ -370,14 +323,7 @@ export class OpenRouterService {
     const prompt = buildColumnMappingPrompt(headers, samples);
 
     const estimatedTokens = this.estimateTokens(prompt);
-    console.log(
-      `[OpenRouterService] Column mapping: ` +
-      `model=${this.modelName}, ` +
-      `headers=${headers.length}, ` +
-      `samples=${samples.length}, ` +
-      `estimated=${estimatedTokens} tokens, ` +
-      `attempt=${attempt}`
-    );
+    logger.info({ model: this.modelName, headers: headers.length, samples: samples.length, estimatedTokens, attempt }, 'Column mapping request');
 
     const client = this.ensureClient();
 
@@ -434,12 +380,7 @@ export class OpenRouterService {
       completionTokens: usage?.completion_tokens ?? 0,
     };
 
-    console.log(
-      `[OpenRouterService] Column mapping tokens: ` +
-      `Prompt=${tokenUsage.promptTokens}, ` +
-      `Completion=${tokenUsage.completionTokens}, ` +
-      `Total=${tokenUsage.totalTokens}`
-    );
+    logger.info(tokenUsage, 'Column mapping token usage');
 
     // Parse the JSON response
     const parsed = this.parseMappingResponse(content);
@@ -448,17 +389,11 @@ export class OpenRouterService {
     return { ...parsed, tokenUsage };
   }
 
-  /**
-   * Parse the mapping response from OpenRouter.
-   */
   private parseMappingResponse(text: string): AiMappingResponse {
     const repaired = this.tryJsonRepair(text);
 
     if (!repaired) {
-      console.warn(
-        `[OpenRouterService] Raw response (${text.length} chars):`,
-        text.substring(0, 500)
-      );
+      logger.warn({ length: text.length, preview: text.substring(0, 500) }, 'OpenRouter response required repair');
       throw new OpenRouterApiError(
         'Failed to parse OpenRouter response as JSON. The AI response was not valid JSON.',
         'PARSE_ERROR',
@@ -470,10 +405,7 @@ export class OpenRouterService {
     try {
       parsed = JSON.parse(repaired);
     } catch {
-      console.warn(
-        `[OpenRouterService] Raw response (${text.length} chars):`,
-        text.substring(0, 500)
-      );
+      logger.warn({ length: text.length, preview: text.substring(0, 500) }, 'OpenRouter response was not valid JSON');
       throw new OpenRouterApiError(
         'Failed to parse OpenRouter response as JSON.',
         'PARSE_ERROR',
@@ -508,9 +440,6 @@ export class OpenRouterService {
     return parsed;
   }
 
-  /**
-   * Validate that all headers have a mapping entry and all values are valid.
-   */
   private validateMapping(parsed: AiMappingResponse, originalHeaders: string[]): void {
     const validCrmFields = new Set([
       'email', 'name', 'mobile_without_country_code', 'country_code',
@@ -518,34 +447,26 @@ export class OpenRouterService {
       'crm_status', 'crm_note', 'created_at', 'possession_time', 'description', '',
     ]);
 
-    // Warn about unmapped headers
     for (const header of originalHeaders) {
       if (!(header in parsed.mapping)) {
-        console.warn(
-          `[OpenRouterService] Header "${header}" was not included in mapping — treating as unmapped`
-        );
+        logger.warn({ header }, 'Header was not included in AI mapping');
         parsed.mapping[header] = '';
       }
     }
 
-    // Validate mapping values
     for (const [header, value] of Object.entries(parsed.mapping)) {
       if (!validCrmFields.has(value)) {
-        console.warn(
-          `[OpenRouterService] Header "${header}" mapped to unknown field "${value}" — resetting to ""`
-        );
+        logger.warn({ header, value }, 'Header mapped to unknown CRM field');
         parsed.mapping[header] = '';
       }
     }
   }
 
-  // ===== Mock Mode =====
-
   private async mockMapping(
     headers: string[],
     sampleRows: CsvRow[]
   ): Promise<OpenRouterMappingResult> {
-    console.log(`[OpenRouterService] Mock mode: generating column mapping for ${headers.length} headers`);
+    logger.info({ headers: headers.length }, 'Generating mock column mapping');
 
     await sleep(500);
 
