@@ -18,8 +18,6 @@ import {
   ImportSummary,
 } from '@/types';
 
-// ===== Dynamic Imports (code-split large components with @tanstack/react-table) =====
-
 const CsvPreview = dynamic(
   () => import('@/components/csv-preview').then((m) => ({ default: m.CsvPreview })),
   {
@@ -68,8 +66,6 @@ const ImportResults = dynamic(
     </Card>
   ),
 });
-
-// ===== Friendly Error Messages =====
 
 interface AxiosErrorLike {
   code?: string;

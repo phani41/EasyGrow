@@ -2,8 +2,6 @@ import { CsvRow, CrmRecord, ImportSummary, ColumnMapping, DatasetType, DatasetCl
 import { isValidEmail } from '../utils/helpers';
 import { OpenRouterService } from './openrouter.service';
 
-// ===== Types =====
-
 interface MappingCacheEntry {
   mapping: ColumnMapping;
   datasetType: DatasetType;
@@ -12,14 +10,10 @@ interface MappingCacheEntry {
   createdAt: number;
 }
 
-// ===== Constants =====
-
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const RULE_COVERAGE_THRESHOLD = 0.5; // 50% — lowered from 60% to skip AI more often
 const MIN_CONFIDENCE_FOR_CRM = 80;
 const CRM_FIELD_COUNT = 14; // Total number of CRM schema fields
-
-// ===== Rule Patterns =====
 
 interface FieldRule {
   patterns: RegExp[];
@@ -175,8 +169,6 @@ const FIELD_RULES: FieldRule[] = [
   },
 ];
 
-// ===== Dataset Classification Rules =====
-
 interface DatasetRule {
   type: DatasetType;
   keywords: string[];
@@ -194,11 +186,6 @@ const DATASET_RULES: DatasetRule[] = [
   { type: 'Marketing Dataset', keywords: ['campaign', 'source', 'medium', 'channel', 'click', 'impression', 'conversion', 'ad', 'traffic', 'lead source', 'utm', 'referral'], weight: 1 },
 ];
 
-// ===== Local Transformation Functions =====
-
-/**
- * Map CRM status text to assignment-required values.
- */
 function normalizeCrmStatus(value: string): string {
   if (!value) return '';
   const v = value.toLowerCase().trim();
@@ -318,19 +305,12 @@ function detectDataSource(fileName: string): DataSource {
   return '';
 }
 
-// ===== Helper Functions =====
-
-/**
- * Get headers key for cache lookup (sorted, lowercased, trimmed).
- */
 function getCacheKey(headers: string[]): string {
   return headers
     .map((h) => h.toLowerCase().trim())
     .sort()
     .join('||');
 }
-
-// ===== Dataset Classification =====
 
 function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassification {
   const headerLower = headers.map((h) => h.toLowerCase().trim());
@@ -397,8 +377,6 @@ function classifyDataset(headers: string[], sampleRows: CsvRow[]): DatasetClassi
   };
 }
 
-// ===== Rule-Based Field Detection =====
-
 function detectFieldsByRules(headers: string[]): { mapping: ColumnMapping; coverage: number; skippedFields: string[] } {
   const mapping: ColumnMapping = {};
   const assignedFields = new Set<string>();
@@ -427,8 +405,6 @@ function detectFieldsByRules(headers: string[]): { mapping: ColumnMapping; cover
 
   return { mapping, coverage, skippedFields };
 }
-
-// ===== Local Record Transformation =====
 
 function transformRow(
   row: CsvRow,
@@ -558,8 +534,6 @@ function transformRow(
     description,
   };
 }
-
-// ===== Mapping Service =====
 
 export class MappingService {
   private mappingCache: Map<string, MappingCacheEntry>;
@@ -750,54 +724,6 @@ export class MappingService {
     };
   }
 
-  applyMappingInBatches(
-    rows: CsvRow[],
-    headers: string[],
-    mapping: ColumnMapping,
-    mappingResult: MappingResult,
-    dataSource: string,
-    batchSize: number = 500,
-    onBatchComplete?: (batchIndex: number, totalBatches: number, records: CrmRecord[], cumulativeSummary: ImportSummary) => void,
-  ): { records: CrmRecord[]; summary: ImportSummary } {
-    const allRecords: CrmRecord[] = [];
-    const cumulativeSummary: ImportSummary = {
-      totalProcessed: 0,
-      skippedNoContact: 0,
-      skippedInvalid: 0,
-      emailsExtracted: 0,
-      phonesExtracted: 0,
-    };
-
-    const totalBatches = Math.ceil(rows.length / batchSize);
-
-    for (let i = 0; i < totalBatches; i++) {
-      const start = i * batchSize;
-      const end = Math.min(start + batchSize, rows.length);
-      const batchRows = rows.slice(start, end);
-
-      const { records: batchRecords, summary: batchSummary } = this.applyMapping(
-        batchRows,
-        headers,
-        mapping,
-        mappingResult,
-        dataSource,
-      );
-
-      allRecords.push(...batchRecords);
-      cumulativeSummary.totalProcessed += batchSummary.totalProcessed;
-      cumulativeSummary.skippedNoContact += batchSummary.skippedNoContact;
-      cumulativeSummary.skippedInvalid += batchSummary.skippedInvalid;
-      cumulativeSummary.emailsExtracted += batchSummary.emailsExtracted;
-      cumulativeSummary.phonesExtracted += batchSummary.phonesExtracted;
-
-      if (onBatchComplete) {
-        onBatchComplete(i, totalBatches, batchRecords, { ...cumulativeSummary });
-      }
-    }
-
-    return { records: allRecords, summary: cumulativeSummary };
-  }
-
   private cleanupCache(): void {
     const now = Date.now();
     for (const [key, entry] of this.mappingCache.entries()) {
@@ -805,22 +731,5 @@ export class MappingService {
         this.mappingCache.delete(key);
       }
     }
-  }
-
-  getCacheStats(): { size: number; entries: Array<{ datasetType: DatasetType; age: number }> } {
-    const now = Date.now();
-    const entries = Array.from(this.mappingCache.entries()).map(([key, entry]) => ({
-      key,
-      datasetType: entry.datasetType,
-      age: Math.round((now - entry.createdAt) / 1000),
-      usedRuleBased: entry.usedRuleBased,
-    }));
-
-    return { size: this.mappingCache.size, entries };
-  }
-
-  clearCache(): void {
-    this.mappingCache.clear();
-    console.log('[MappingService] Cache cleared');
   }
 }

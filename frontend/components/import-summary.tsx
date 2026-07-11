@@ -21,8 +21,6 @@ interface ImportSummaryCardProps {
   summary: ImportSummary;
 }
 
-// ===== Animated Counter =====
-
 function AnimatedCounter({
   value,
   duration = 1000,
@@ -60,8 +58,6 @@ function AnimatedCounter({
 
   return <>{displayValue.toLocaleString()}</>;
 }
-
-// ===== Main Component =====
 
 export function ImportSummaryCard({ summary }: ImportSummaryCardProps) {
   const totalContacts = summary.totalProcessed + summary.skippedNoContact;

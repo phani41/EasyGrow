@@ -6,15 +6,16 @@ dist/
 .next/
 out/
 
+# Test coverage
+coverage/
+
 # Temporary
-cleanup.bat
 *.tmp
 
 # Environment
 .env
 .env.local
 .env.production
-.env.example
 
 # IDE
 .vscode/
@@ -34,7 +35,7 @@ logs/*.log
 backend/logs/*.log
 !backend/logs/.gitkeep
 
-# Uploaded files (keep .gitkeep)
+# Uploaded files
 uploads/*
 !uploads/.gitkeep
 backend/uploads/*

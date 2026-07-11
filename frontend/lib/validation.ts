@@ -3,35 +3,15 @@ export interface ValidationResult {
   error?: string;
 }
 
-export interface BackendValidationWarning {
-  field: string;
-  message: string;
-  code: string;
-  details?: Record<string, unknown>;
-}
-
-export interface BackendValidation {
-  warnings: BackendValidationWarning[];
-  warningCount: number;
-}
-
-// Must match backend's MAX_FILE_SIZE (50MB)
-export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+export const MAX_FILE_SIZE = 50 * 1024 * 1024;
 export const MAX_FILE_SIZE_READABLE = '50 MB';
 
-/**
- * Format bytes into a human-readable string.
- */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * Sanitize a filename to prevent path traversal and XSS.
- * Removes path separators, null bytes, and non-printable characters.
- */
 export function sanitizeFileName(name: string): string {
   return name
     .replace(/[/\\]/g, '_')     // Replace path separators
@@ -41,10 +21,6 @@ export function sanitizeFileName(name: string): string {
     .slice(0, 255);              // Limit length
 }
 
-/**
- * Validate a File object before upload.
- * Checks: file exists, .csv extension, file size, empty file.
- */
 export function validateFile(file: File): ValidationResult {
   if (!file) {
     return { valid: false, error: 'No file provided' };
@@ -80,17 +56,10 @@ export function validateFile(file: File): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Validate the filename extension only (lightweight check for drag-reject display).
- */
 export function isValidCsvExtension(filename: string): boolean {
   return filename.toLowerCase().endsWith('.csv');
 }
 
-/**
- * Sanitize a cell value to prevent CSV injection (formula injection).
- * Cells starting with =, +, -, @ or tab get prefixed with a single quote.
- */
 export function sanitizeCsvCell(value: string): string {
   if (/^[=+\-@\t]/.test(value)) {
     return `"'${value.replace(/"/g, '""')}"`;
@@ -98,21 +67,3 @@ export function sanitizeCsvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-/**
- * Get a human-readable error message for a backend validation warning.
- */
-export function formatValidationWarning(warning: BackendValidationWarning): string {
-  return warning.message;
-}
-
-/**
- * Get a summary string from backend validation warnings.
- */
-export function summarizeWarnings(warnings: BackendValidationWarning[]): string | null {
-  if (warnings.length === 0) return null;
-
-  const count = warnings.length;
-  const firstMessage = warnings[0].message;
-  if (count === 1) return firstMessage;
-  return `${firstMessage} (and ${count - 1} more warning${count > 2 ? 's' : ''})`;
-}

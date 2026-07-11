@@ -1,35 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 import promClient from 'prom-client';
 
-// ===== Registry =====
-
 const register = new promClient.Registry();
 
-// Add default metrics (CPU, memory, event loop lag, etc.)
 promClient.collectDefaultMetrics({
   register,
   prefix: 'easygrow_',
 });
 
-// ===== Custom Metrics =====
-
-// Upload counter
 export const uploadCounter = new promClient.Counter({
   name: 'easygrow_uploads_total',
   help: 'Total number of CSV file uploads',
-  labelNames: ['status'], // 'success', 'error'
+  labelNames: ['status'],
   registers: [register],
 });
 
-// Import counter
 export const importCounter = new promClient.Counter({
   name: 'easygrow_imports_total',
   help: 'Total number of CSV-to-CRM imports',
-  labelNames: ['status', 'method'], // 'success', 'error'; 'streaming', 'batch'
+  labelNames: ['status', 'method'],
   registers: [register],
 });
 
-// Record counters
 export const recordsProcessed = new promClient.Counter({
   name: 'easygrow_records_processed_total',
   help: 'Total number of records processed',
@@ -42,15 +34,13 @@ export const recordsSkipped = new promClient.Counter({
   registers: [register],
 });
 
-// AI call counter
 export const aiCallsTotal = new promClient.Counter({
   name: 'easygrow_ai_calls_total',
   help: 'Total number of AI API calls made',
-  labelNames: ['provider', 'status'], // 'openrouter'; 'success', 'error'
+  labelNames: ['provider', 'status'],
   registers: [register],
 });
 
-// Cache metrics
 export const mappingCacheHits = new promClient.Counter({
   name: 'easygrow_mapping_cache_hits_total',
   help: 'Total number of mapping cache hits',
@@ -63,37 +53,28 @@ export const mappingCacheMisses = new promClient.Counter({
   registers: [register],
 });
 
-// Processing time histogram
 export const processingDuration = new promClient.Histogram({
   name: 'easygrow_processing_duration_seconds',
   help: 'Duration of import processing in seconds',
-  labelNames: ['method'], // 'rules', 'ai', 'combined'
+  labelNames: ['method'],
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120],
   registers: [register],
 });
 
-// Rule-based vs AI counter
 export const mappingStrategy = new promClient.Counter({
   name: 'easygrow_mapping_strategy_total',
   help: 'Total imports by mapping strategy',
-  labelNames: ['strategy'], // 'rule_based', 'ai_assisted'
+  labelNames: ['strategy'],
   registers: [register],
 });
 
-// Dataset type counter
 export const datasetTypes = new promClient.Counter({
   name: 'easygrow_dataset_types_total',
   help: 'Total imports by dataset type',
-  labelNames: ['type'], // 'CRM Leads', 'Unknown', etc.
+  labelNames: ['type'],
   registers: [register],
 });
 
-// ===== Metrics Endpoint Middleware =====
-
-/**
- * GET /metrics endpoint handler.
- * Returns all Prometheus metrics in plain text format.
- */
 export async function metricsHandler(_req: Request, res: Response, _next: NextFunction): Promise<void> {
   try {
     res.setHeader('Content-Type', register.contentType);

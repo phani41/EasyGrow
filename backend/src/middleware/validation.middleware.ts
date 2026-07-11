@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../types';
 
-/**
- * Validates the /api/map request body.
- * Requires fileId to be a non-empty string.
- */
 export function validateMapRequest(
   req: Request,
   _res: Response,

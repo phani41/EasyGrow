@@ -4,16 +4,11 @@ import { API_BASE_URL } from '@/lib/config';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 300000, // 5 minutes for AI batch processing
+  timeout: 300000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// ===== Retry Interceptor for Render Cold Start =====
-// Render free tier spins down after inactivity. The first request after
-// a period of inactivity will fail with a connection error. We retry
-// with exponential backoff to give Render time to wake up.
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 2000; // 2 seconds initial delay
@@ -36,7 +31,6 @@ function isRetryableError(error: unknown): boolean {
 }
 
 function getColdStartDelay(attempt: number): number {
-  // Exponential backoff: 2s, 4s, 8s
   return Math.min(BASE_DELAY_MS * Math.pow(2, attempt - 1), 10000);
 }
 
@@ -44,7 +38,6 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config as typeof error.config & { _retryCount?: number };
-    // Avoid infinite retry loops
     const retryCount = originalRequest._retryCount ?? 0;
     originalRequest._retryCount = retryCount;
 
@@ -61,15 +54,10 @@ apiClient.interceptors.response.use(
       });
     }
 
-    // Pass through if not retryable or max retries reached
     return Promise.reject(error);
   }
 );
 
-/**
- * Upload a CSV file and get preview data.
- * The full parsed CSV is cached server-side for subsequent AI processing.
- */
 export async function uploadCsvFile(file: File): Promise<ApiResponse<UploadPreviewData>> {
   const formData = new FormData();
   formData.append('file', file);
@@ -84,10 +72,6 @@ export async function uploadCsvFile(file: File): Promise<ApiResponse<UploadPrevi
   return response.data;
 }
 
-/**
- * Map a previously uploaded CSV to CRM schema using AI.
- * Uses the fileId returned from the upload endpoint to reference cached data.
- */
 export async function mapCsvToCrm(
   fileId: string
 ): Promise<ApiResponse<MapResponseData>> {

@@ -11,9 +11,6 @@ export class CsvService {
     this.validationService = new ValidationService();
   }
 
-  /**
-   * Parse a CSV file and return headers and rows with validation.
-   */
   async parseFile(
     filePath: string,
     fileName: string
@@ -72,9 +69,6 @@ export class CsvService {
     });
   }
 
-  /**
-   * Read a batch of rows from memory by indices.
-   */
   getBatch(
     rows: CsvRow[],
     batchIndex: number,
@@ -85,16 +79,10 @@ export class CsvService {
     return rows.slice(start, end);
   }
 
-  /**
-   * Get total number of batches.
-   */
   getTotalBatches(totalRows: number, batchSize: number): number {
     return Math.ceil(totalRows / batchSize);
   }
 
-  /**
-   * Clean up uploaded file after processing.
-   */
   cleanupFile(filePath: string): void {
     try {
       if (fs.existsSync(filePath)) {

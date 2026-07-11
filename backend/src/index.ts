@@ -1,26 +1,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// ===== Unhandled Promise Rejection Handler =====
-// Must be attached early to catch rejections during module loading.
-// Logs the error and exits so the process manager (Render/Docker) can restart.
 process.on('unhandledRejection', (reason: unknown) => {
   console.error('[FATAL] Unhandled Promise rejection:', reason);
   process.exit(1);
 });
 
-// ===== Startup Diagnostics =====
-// These console.log calls run before the logger is initialized.
-// They confirm the runtime environment before any other module loads.
-console.log('[Startup] ========================================');
-console.log(`[Startup] NODE_ENV:    ${process.env.NODE_ENV || 'not set (defaulting to development)'}`);
-console.log(`[Startup] LOG_LEVEL:   ${process.env.LOG_LEVEL || 'not set (defaulting to info)'}`);
-console.log(`[Startup] Platform:    ${process.platform} ${process.arch}`);
-console.log(`[Startup] Node.js:     ${process.version}`);
-console.log(`[Startup] PID:         ${process.pid}`);
-console.log(`[Startup] Production:  ${process.env.NODE_ENV === 'production' ? 'YES' : 'NO'}`);
-console.log(`[Startup] CWD:         ${process.cwd()}`);
-console.log('[Startup] ========================================');
+console.log('[Startup] NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('[Startup] Node.js:', process.version);
+console.log('[Startup] PID:', process.pid);
 
 import fs from 'fs';
 import express from 'express';
@@ -33,15 +21,13 @@ import { requestIdMiddleware, getRequestId } from './middleware/request-id.middl
 import { globalRateLimiter } from './middleware/rate-limit.middleware';
 import { csvCache } from './services/cache.service';
 import { logger, httpLogger } from './services/logger.service';
-import { metricsHandler, uploadCounter, importCounter, recordsProcessed, recordsSkipped, aiCallsTotal, mappingCacheHits, mappingCacheMisses, processingDuration, mappingStrategy, datasetTypes } from './services/metrics.service';
+import { metricsHandler } from './services/metrics.service';
 
-import './types/express'; // Request type augmentation
+import './types/express';
 
-// Ensure upload directory exists
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
-  console.log(`[Server] Created upload directory: ${uploadDir}`);
 }
 
 const app = express();
@@ -49,12 +35,8 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 const isProduction = process.env.NODE_ENV === 'production';
 
-// ===== Compression =====
-// Gzip compress all HTTP responses (especially large JSON results)
 app.use(compression());
 
-// ===== Security Middleware =====
-// Helmet sets various HTTP headers for security (CSP, XSS, etc.)
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -62,38 +44,28 @@ app.use(
   })
 );
 
-// ===== Request Tracking =====
-// Must come before logging so request IDs are available
 app.use(requestIdMiddleware);
-
-// ===== HTTP Request Logging (Structured JSON via Pino) =====
 app.use(httpLogger);
 
-// ===== CORS =====
 app.use(
   cors({
     origin: isProduction
-      ? [CORS_ORIGIN]  // Production: only allowed origins
-      : '*',            // Development: allow all for local testing
+      ? [CORS_ORIGIN]
+      : '*',
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: isProduction,
-    maxAge: 86400, // Cache preflight for 24 hours
+    maxAge: 86400,
   })
 );
 
-// ===== Body Parsing =====
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ===== Global Rate Limiting =====
 app.use('/api', globalRateLimiter);
 
-// ===== Prometheus Metrics =====
-// Exposes metrics at GET /metrics in Prometheus text format
 app.get('/metrics', metricsHandler);
 
-// ===== Health Check =====
 app.get('/api/health', (_req, res) => {
   res.json({
     success: true,
@@ -103,15 +75,10 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// ===== Routes =====
 app.use('/api', uploadRoutes);
 
-// ===== Error Handling =====
-// Must be last so they catch all errors
 app.use(notFoundHandler);
 app.use(errorHandler);
-
-// ===== Graceful Shutdown =====
 
 function shutdown(signal: string) {
   logger.info({ signal }, 'Received shutdown signal. Starting graceful shutdown...');
@@ -123,7 +90,6 @@ function shutdown(signal: string) {
     process.exit(0);
   });
 
-  // Force exit after 10s if graceful shutdown hangs
   setTimeout(() => {
     logger.error('Forced shutdown after timeout.');
     process.exit(1);
@@ -133,7 +99,6 @@ function shutdown(signal: string) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-// ===== Start Server =====
 const server = app.listen(PORT, async () => {
   const isMockMode = process.env.OPENROUTER_MOCK_MODE === 'true';
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -151,7 +116,6 @@ const server = app.listen(PORT, async () => {
     mapRateLimit: process.env.MAP_RATE_LIMIT || '20',
   }, 'EasyGrow backend server started');
 
-  // Local-only config validation — no remote API calls during startup
   const configErrors: string[] = [];
 
   if (!isMockMode && !apiKey) {

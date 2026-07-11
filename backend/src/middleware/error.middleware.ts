@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError, ApiResponse } from '../types';
-import '../types/express'; // Request type augmentation
+import '../types/express';
 import { getRequestId } from './request-id.middleware';
-
-// ===== Error Response Shape =====
 
 interface ErrorResponse {
   success: false;
@@ -13,14 +11,11 @@ interface ErrorResponse {
   details?: Record<string, unknown>;
 }
 
-// ===== Error Code Mapping =====
-
 const ERROR_CODES: Record<number, string> = {
   400: 'BAD_REQUEST',
   401: 'UNAUTHORIZED',
   403: 'FORBIDDEN',
   404: 'NOT_FOUND',
-  // Multer file size
   413: 'FILE_TOO_LARGE',
   422: 'VALIDATION_ERROR',
   429: 'RATE_LIMIT_EXCEEDED',
@@ -33,8 +28,6 @@ function getErrorCode(statusCode: number): string {
   return ERROR_CODES[statusCode] || 'UNKNOWN_ERROR';
 }
 
-// ===== Error Handler =====
-
 export const errorHandler = (
   err: Error | AppError,
   req: Request,
@@ -43,7 +36,6 @@ export const errorHandler = (
 ): void => {
   const requestId = getRequestId(req);
 
-  // Determine status code and message
   let statusCode = 500;
   let message = 'Internal server error';
   let code = 'INTERNAL_ERROR';
@@ -58,7 +50,6 @@ export const errorHandler = (
       : undefined;
   }
 
-  // Multer errors (Express Multer errors are plain Errors with specific messages)
   if (err.message?.includes('File too large')) {
     statusCode = 413;
     message = 'File size exceeds the maximum limit of 10 MB.';
@@ -71,7 +62,6 @@ export const errorHandler = (
     code = 'UNEXPECTED_FIELD';
   }
 
-  // Log the error with request context
   const logLine = [
     `[${statusCode}]`,
     `${req.method} ${req.originalUrl}`,
@@ -88,7 +78,6 @@ export const errorHandler = (
     console.warn(logLine);
   }
 
-  // Build error response
   const errorResponse: ErrorResponse = {
     success: false,
     error: message,
@@ -102,8 +91,6 @@ export const errorHandler = (
 
   res.status(statusCode).json(errorResponse);
 };
-
-// ===== 404 Handler =====
 
 export const notFoundHandler = (
   req: Request,

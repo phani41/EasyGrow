@@ -1,5 +1,3 @@
-// ===== Crm Types =====
-
 export type CrmStatus =
   | 'GOOD_LEAD_FOLLOW_UP'
   | 'DID_NOT_CONNECT'
@@ -31,8 +29,6 @@ export interface CrmRecord {
   possession_time: string;
   description: string;
 }
-
-// ===== Api Types =====
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -87,8 +83,6 @@ export interface ImportSummary {
   phonesExtracted: number;
 }
 
-// ===== Validation Types =====
-
 export interface ValidationWarning {
   field: string;
   message: string;
@@ -100,8 +94,6 @@ export interface UploadValidation {
   warnings: ValidationWarning[];
   warningCount: number;
 }
-
-// ===== SSE Event Types =====
 
 export interface SseProgressEvent {
   type: 'batch-start' | 'batch-complete' | 'complete' | 'error' | 'mapping-start' | 'mapping-complete';
@@ -115,11 +107,4 @@ export interface SseProgressEvent {
   mappingInfo?: MappingInfo;
 }
 
-// ===== UI State Types =====
-
 export type UploadState = 'idle' | 'uploading' | 'preview' | 'processing' | 'complete' | 'error';
-
-export interface FileValidationResult {
-  valid: boolean;
-  error?: string;
-}

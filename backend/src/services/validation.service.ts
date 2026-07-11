@@ -6,10 +6,6 @@ const MIN_COLUMNS = 1;
 const MIN_ROWS = 1;
 
 export class ValidationService {
-  /**
-   * Validate parsed CSV headers and rows for content-level correctness.
-   * This runs AFTER the file-level checks (mime type, size, extension).
-   */
   validateCsvContent(
     headers: string[],
     rows: CsvRow[]
@@ -160,10 +156,6 @@ export class ValidationService {
     }
   }
 
-  /**
-   * Patterns that indicate a CSV injection (aka formula injection) attempt.
-   * When a cell starts with =, +, -, @, or tab, Excel/Sheets may execute it as a formula.
-   */
   private readonly CSV_INJECTION_PATTERN = /^[=+\-@\t]/;
 
   private validateDataQuality(

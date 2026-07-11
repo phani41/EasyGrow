@@ -30,8 +30,6 @@ import { cn } from '@/lib/utils';
 import { CellDetailModal } from '@/components/cell-detail-modal';
 import type { ValidationWarning } from '@/types';
 
-// ===== Interfaces =====
-
 interface CsvPreviewProps {
   headers: string[];
   rows: Record<string, string | undefined>[];
@@ -42,8 +40,6 @@ interface CsvPreviewProps {
   onProcessWithAi?: () => void;
   isProcessing?: boolean;
 }
-
-// ===== Loading Skeleton =====
 
 function PreviewSkeleton() {
   return (
@@ -84,8 +80,6 @@ function PreviewSkeleton() {
   );
 }
 
-// ===== Empty State =====
-
 function EmptyState() {
   return (
     <Card className="animate-fade-in">
@@ -101,8 +95,6 @@ function EmptyState() {
     </Card>
   );
 }
-
-// ===== Main Component =====
 
 type CsvRow = Record<string, string | undefined>;
 

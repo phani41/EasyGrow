@@ -8,10 +8,6 @@ interface CachedCsvData {
   createdAt: Date;
 }
 
-/**
- * Simple in-memory cache for parsed CSV data.
- * In production, this could be replaced with Redis or a database.
- */
 class CsvDataCache {
   private store = new Map<string, CachedCsvData>();
   private readonly TTL_MS = 30 * 60 * 1000; // 30 minutes

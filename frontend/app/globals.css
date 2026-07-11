@@ -58,7 +58,6 @@
   }
 }
 
-/* ===== Scrollbar Styles ===== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -72,13 +71,11 @@
   @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
 }
 
-/* Firefox scrollbar */
 * {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
 }
 
-/* ===== Animation Helpers ===== */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -118,7 +115,6 @@
   animation: shimmer 1.5s infinite;
 }
 
-/* ===== Print Styles ===== */
 @media print {
   .no-print {
     display: none !important;

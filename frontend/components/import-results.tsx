@@ -34,16 +34,12 @@ import { CellDetailModal } from '@/components/cell-detail-modal';
 import { sanitizeCsvCell } from '@/lib/validation';
 import { CrmRecord, CrmStatus } from '@/types';
 
-// ===== Interfaces =====
-
 interface ImportResultsProps {
   records: CrmRecord[];
   summary: {
     totalProcessed: number;
   };
 }
-
-// ===== Status Badge Variants =====
 
 const statusVariantMap: Record<CrmStatus, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline'> = {
   GOOD_LEAD_FOLLOW_UP: 'success',
@@ -58,8 +54,6 @@ const statusDisplayMap: Record<CrmStatus, string> = {
   BAD_LEAD: 'Bad Lead',
   SALE_DONE: 'Sale Done',
 };
-
-// ===== Main Component =====
 
 export function ImportResults({ records, summary }: ImportResultsProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);

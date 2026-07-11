@@ -7,8 +7,6 @@ import { cn } from '@/lib/utils';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-// metadataBase should point to the frontend URL (Vercel deployment).
-// For now this is a reasonable default — override via NEXT_PUBLIC_URL env var.
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://easygrow-zs8n.onrender.com';
 
 export const metadata: Metadata = {

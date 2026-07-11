@@ -7,13 +7,8 @@ export type SseCompleteListener = (records: CrmRecord[], summary: ImportSummary)
 
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY_MS = 2000;
-const SSE_TIMEOUT_MS = 600_000; // 10 minutes — if no events received in 10 min, timeout
+const SSE_TIMEOUT_MS = 600_000;
 
-/**
- * Connect to the SSE streaming endpoint for real-time batch processing.
- * Includes automatic reconnection with exponential backoff for Render cold starts.
- * Returns a cleanup function to abort the connection.
- */
 export function connectMappingStream(
   fileId: string,
   {

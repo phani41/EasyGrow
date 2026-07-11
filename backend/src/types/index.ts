@@ -1,5 +1,3 @@
-// ===== Crm Record Types =====
-
 export type CrmStatus =
   | 'GOOD_LEAD_FOLLOW_UP'
   | 'DID_NOT_CONNECT'
@@ -47,8 +45,6 @@ export const ALLOWED_DATA_SOURCES: readonly DataSource[] = [
   'sarjapur_plots',
 ] as const;
 
-// ===== Csv Parsing Types =====
-
 export interface CsvRow {
   [key: string]: string | undefined;
 }
@@ -63,40 +59,6 @@ export interface ParsedCsvResponse {
 
 // ===== Upload Types =====
 
-export interface UploadedFileInfo {
-  id: string;
-  originalName: string;
-  path: string;
-  size: number;
-  mimetype: string;
-}
-
-export interface UploadResponse {
-  success: boolean;
-  fileId: string;
-  fileName: string;
-  totalRows: number;
-  headers: string[];
-}
-
-// ===== AI Mapping Types =====
-
-export interface AiMappingRequest {
-  fileId: string;
-  headers: string[];
-  rows: CsvRow[];
-  batchIndex?: number;
-  totalBatches?: number;
-}
-
-export interface AiMappingResponse {
-  success: boolean;
-  records: CrmRecord[];
-  batchIndex: number;
-  totalBatches: number;
-  summary: ImportSummary;
-}
-
 export interface ImportSummary {
   totalProcessed: number;
   skippedNoContact: number;
@@ -104,8 +66,6 @@ export interface ImportSummary {
   emailsExtracted: number;
   phonesExtracted: number;
 }
-
-// ===== SSE Event Types =====
 
 export interface BatchProgressEvent {
   type: 'batch-start' | 'batch-complete' | 'complete' | 'error';
@@ -118,8 +78,6 @@ export interface BatchProgressEvent {
   error?: string;
 }
 
-// ===== Api Response Wrapper =====
-
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -128,8 +86,6 @@ export interface ApiResponse<T = unknown> {
   code?: string;
   requestId?: string;
 }
-
-// ===== Dataset Classification Types =====
 
 export type DatasetType =
   | 'CRM Leads'
@@ -161,8 +117,6 @@ export interface MappingResult {
   cacheHit: boolean;
 }
 
-// ===== Validation Types =====
-
 export interface ValidationError {
   field: string;
   message: string;
@@ -177,8 +131,6 @@ export interface ValidationResult {
   errorCount: number;
   warningCount: number;
 }
-
-// ===== Error Types =====
 
 export class AppError extends Error {
   public statusCode: number;
